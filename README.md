@@ -39,3 +39,11 @@ PUT https://yoururl.com/posts/1
 }
 DELETE https://yoururl.com/posts/1
 ```
+
+## How to start the API
+
+1. Use Docker Compose
+
+```bash
+docker-compose up -d --build
+```

@@ -1,0 +1,41 @@
+version: '3.1'
+
+services:
+  app:
+    build: .
+    container_name: rest-api-test
+    ports:
+      - "3000:3000"
+    networks:
+      - rest-api-test
+    depends_on:
+      - db
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: postgres
+
+  db:
+    image: postgres:11
+    container_name: postgresql
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./database/create.sql:/docker-entrypoint-initdb.d/create-schema.sql
+    networks:
+      - rest-api-test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+volumes:
+  db:
+    driver: local
+
+networks:
+  rest-api-test:
+    driver: bridge
