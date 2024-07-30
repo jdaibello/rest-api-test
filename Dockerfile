@@ -18,12 +18,12 @@ WORKDIR $HOME
 # Update packages
 RUN apk update
 
-COPY --chown=$USER:$USER package.json package-lock.json ./
+COPY --chown=$USER:$USER package.json package-lock.json $HOME/
 
 # Install dependencies
 RUN npm install
 
-COPY --chown=$USER:$USER . .
+COPY --chown=$USER:$USER . $HOME/
 
 EXPOSE 3000
 
