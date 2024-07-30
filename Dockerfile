@@ -18,12 +18,16 @@ WORKDIR $HOME
 # Update packages
 RUN apk update
 
-COPY --chown=$USER:$USER package.json package-lock.json ./
+COPY --chown=$USER:$USER package.json package-lock.json $HOME/
 
 # Install dependencies
 RUN npm install
 
-COPY --chown=$USER:$USER . .
+COPY --chown=$USER:$USER . $HOME/
+
+# Used for VS Code devcontainer
+
+RUN chown -R $USER:$USER .config
 
 EXPOSE 3000
 
