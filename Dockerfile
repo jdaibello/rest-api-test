@@ -25,6 +25,10 @@ RUN npm install
 
 COPY --chown=$USER:$USER . $HOME/
 
+# Used for VS Code devcontainer
+
+RUN chown -R $USER:$USER .config
+
 EXPOSE 3000
 
 USER $USER
