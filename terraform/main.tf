@@ -30,3 +30,9 @@ terraform {
 provider "aws" {
   region = var.aws_region
 }
+
+############
+### DATA ###
+############
+
+data "aws_caller_identity" "current" {}
