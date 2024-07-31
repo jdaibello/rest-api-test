@@ -17,7 +17,7 @@
 
 # data "aws_iam_policy_document" "tfstate_bucket_policy" {
 #   statement {
-#     actions   = ["s3:CreateBucket", "s3:ListBucket"]
+#     actions   = ["s3:CreateBucket"]
 #     resources = [aws_s3_bucket.tfstate_remote_storage.arn]
 #   }
 

@@ -3,7 +3,7 @@
 # #############
 
 # resource "aws_iam_role" "s3_backend_role" {
-#   name = "test-joao-daibello-s3-backend-role"
+#   name = "test-joao-daibello-s3-bucket-backend-role"
 
 #   assume_role_policy = jsonencode({
 #     Version = "2012-10-17",
@@ -11,7 +11,7 @@
 #       {
 #         Effect = "Allow",
 #         Principal = {
-#           Service = "s3.amazonaws.com"
+#           Service = "ec2.amazonaws.com"
 #         },
 #         Action = "sts:AssumeRole"
 #       }
@@ -24,7 +24,7 @@
 # ################
 
 # resource "aws_iam_policy" "s3_backend_policy" {
-#   name        = "test-joao-daibello-s3-backend-policy"
+#   name        = "test-joao-daibello-s3-bucket-backend-policy"
 #   description = "Policy to allow creating S3 buckets"
 
 #   policy = jsonencode({
