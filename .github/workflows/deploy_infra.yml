@@ -24,7 +24,7 @@ jobs:
         run: |
           COMMIT_HASH_SHORT=$(git rev-parse --short HEAD)
           echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}" >> $GITHUB_ENV
-          echo "::set-output name=COMMIT_HASH_SHORT::${COMMIT_HASH_SHORT}"
+          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}" >> $GITHUB_OUTPUT
 
           case "${GITHUB_REF#refs/heads/}" in
             feature/*)
@@ -55,8 +55,9 @@ jobs:
 
           echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}" >> $GITHUB_ENV
           echo "DOCKER_IMAGE_TAG=${TAG}" >> $GITHUB_ENV
-          echo "::set-output name=KUSTOMIZE_PATH::${KUSTOMIZE_PATH}"
-          echo "::set-output name=DOCKER_IMAGE_TAG::${TAG}"
+
+          echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}" >> $GITHUB_OUTPUT
+          echo "DOCKER_IMAGE_TAG=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Log Environment Variables from GITHUB_ENV
         run: |
@@ -71,11 +72,20 @@ jobs:
 
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      COMMIT_HASH_SHORT: ${{ needs.setup.outputs.COMMIT_HASH_SHORT }}
+      DOCKER_IMAGE_TAG: ${{ needs.setup.outputs.DOCKER_IMAGE_TAG }}
+      KUSTOMIZE_PATH: ${{ needs.setup.outputs.KUSTOMIZE_PATH }}
       PLATFORMS: linux/amd64,linux/arm64
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Log GITHUB_OUTPUT
+        run: |
+          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}"
+          echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
+          echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -87,4 +97,4 @@ jobs:
         run: echo "${{ secrets.DOCKER_PAT }}" | docker login docker.io -u "$DOCKER_USERNAME" --password-stdin
 
       - name: Build and push Docker image
-        run: docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:${{ needs.setup.outputs.COMMIT_HASH_SHORT }} -t docker.io/$DOCKER_USERNAME/rest-api-test:${{ needs.setup.outputs.COMMIT_HASH_SHORT }} --push .
+        run: docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:$COMMIT_HASH_SHORT -t docker.io/$DOCKER_USERNAME/rest-api-test:$COMMIT_HASH_SHORT --push .
