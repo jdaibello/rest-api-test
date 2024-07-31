@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      COMMIT_HASH_SHORT: ${{ steps.set_vars.outputs.git_commit_short }}
+      COMMIT_HASH_SHORT: ${{ steps.set_vars.outputs.commit_short_hash }}
       KUSTOMIZE_PATH: ${{ steps.set_vars.outputs.kustomize_path }}
 
     steps:
@@ -46,8 +46,7 @@ jobs:
             TAG=prod
           fi
 
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          echo "::set-output name=COMMIT_HASH_SHORT::$SHORT_SHA"
+          echo "::set-output name=COMMIT_HASH_SHORT::$(git rev-parse --short HEAD)"
 
   docker:
     name: Build and Push Docker Image
