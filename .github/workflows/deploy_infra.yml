@@ -5,7 +5,7 @@ on:
     branches:
       - feature/*
       - current
-      - dev
+      - develop
       - qa
       - uat
       - main
@@ -29,25 +29,32 @@ jobs:
         run: |
           echo "::set-output name=COMMIT_HASH_SHORT::$(git rev-parse --short HEAD)"
 
-          if [[ $GITHUB_REF == refs/heads/feature/* ]]; then
-            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/sandbox"
-            TAG=sandbox
-          elif [[ $GITHUB_REF == refs/heads/current ]]; then
-            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/sandbox"
-            TAG=sandbox
-          elif [[ $GITHUB_REF == refs/heads/develop ]]; then
-            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/dev"
-            TAG=dev
-          elif [[ $GITHUB_REF == refs/heads/qa ]]; then
-            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/qa"
-            TAG=qa
-          elif [[ $GITHUB_REF == refs/heads/uat ]]; then
-            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/uat"
-            TAG=uat
-          elif [[ $GITHUB_REF == refs/heads/main ]]; then
-            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/prod"
-            TAG=latest
-          fi
+          case "${GITHUB_REF#refs/heads/}" in
+            feature/*)
+              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/sandbox"
+              TAG=sandbox
+              ;;
+            current)
+              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/sandbox"
+              TAG=sandbox
+              ;;
+            develop)
+              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/dev"
+              TAG=dev
+              ;;
+            qa)
+              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/qa"
+              TAG=qa
+              ;;
+            uat)
+              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/uat"
+              TAG=uat
+              ;;
+            main)
+              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/prod"
+              TAG=latest
+              ;;
+          esac
 
           echo "::set-output name=DOCKER_IMAGE_TAG::$TAG"
 
