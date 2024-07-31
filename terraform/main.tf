@@ -31,6 +31,10 @@ provider "aws" {
   region = var.aws_region
 }
 
+provider "kubernetes" {
+  config_path = kind_cluster.backend_cluster.kubeconfig_path
+}
+
 ############
 ### DATA ###
 ############
