@@ -15,11 +15,6 @@ jobs:
     name: Setup Environment
     runs-on: ubuntu-latest
 
-    outputs:
-      COMMIT_HASH_SHORT: ${{ steps.set-vars.outputs.commit_short_hash }}
-      DOCKER_IMAGE_TAG: ${{ steps.set-vars.outputs.tag }}
-      KUSTOMIZE_PATH: ${{ steps.set-vars.outputs.kustomize_path }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -27,36 +22,44 @@ jobs:
       - name: Set Environment Variables
         id: set-vars
         run: |
-          echo "COMMIT_HASH_SHORT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          COMMIT_HASH_SHORT=$(git rev-parse --short HEAD)
+          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}" >> $GITHUB_ENV
 
           case "${GITHUB_REF#refs/heads/}" in
             feature/*)
-              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/sandbox" >> $GITHUB_ENV
+              KUSTOMIZE_PATH=terraform/k8s/overlays/sandbox
               TAG=sandbox
               ;;
             current)
-              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/sandbox" >> $GITHUB_ENV
+              KUSTOMIZE_PATH=terraform/k8s/overlays/sandbox
               TAG=sandbox
               ;;
             develop)
-              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/dev" >> $GITHUB_ENV
+              KUSTOMIZE_PATH=terraform/k8s/overlays/dev
               TAG=dev
               ;;
             qa)
-              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/qa" >> $GITHUB_ENV
+              KUSTOMIZE_PATH=terraform/k8s/overlays/qa
               TAG=qa
               ;;
             uat)
-              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/uat" >> $GITHUB_ENV
+              KUSTOMIZE_PATH=terraform/k8s/overlays/uat
               TAG=uat
               ;;
             main)
-              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/prod" >> $GITHUB_ENV
+              KUSTOMIZE_PATH=terraform/k8s/overlays/prod
               TAG=latest
               ;;
           esac
 
-          echo "DOCKER_IMAGE_TAG=$TAG" >> $GITHUB_ENV
+          echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}" >> $GITHUB_ENV
+          echo "DOCKER_IMAGE_TAG=${TAG}" >> $GITHUB_ENV
+
+      - name: Log Environment Variables
+        run: |
+          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}"
+          echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}"
+          echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
 
   docker:
     name: Build and Push Docker Image
