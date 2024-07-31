@@ -63,6 +63,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      GIT_HASH_SHORT: ${{ needs.steps.set_vars.outputs.COMMIT_HASH_SHORT }}
+      DOCKER_IMAGE_TAG: ${{ needs.set_vars.outputs.DOCKER_IMAGE_TAG }}
 
     steps:
       - name: Checkout code
@@ -82,4 +84,4 @@ jobs:
         env:
           PLATFORMS: linux/amd64,linux/arm64
 
-        run: docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:${{ needs.set_vars.outputs.COMMIT_HASH_SHORT }} -t docker.io/$DOCKER_USERNAME/rest-api-test:${{ needs.set_vars.outputs.DOCKER_IMAGE_TAG }} --push .
+        run: docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:$COMMIT_HASH_SHORT -t docker.io/$DOCKER_USERNAME/rest-api-test:$DOCKER_IMAGE_TAG --push .
