@@ -16,16 +16,16 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      COMMIT_HASH_SHORT: ${{ steps.set_vars.outputs.commit_short_hash }}
-      DOCKER_IMAGE_TAG: ${{ steps.set_vars.outputs.tag }}
-      KUSTOMIZE_PATH: ${{ steps.set_vars.outputs.kustomize_path }}
+      COMMIT_HASH_SHORT: ${{ steps.set-vars.outputs.commit_short_hash }}
+      DOCKER_IMAGE_TAG: ${{ steps.set-vars.outputs.tag }}
+      KUSTOMIZE_PATH: ${{ steps.set-vars.outputs.kustomize_path }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Set Environment Variables
-        id: set_vars
+        id: set-vars
         run: |
           echo "COMMIT_HASH_SHORT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
@@ -61,10 +61,11 @@ jobs:
   docker:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    needs: setup
+
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      GIT_HASH_SHORT: ${{ needs.steps.set_vars.outputs.COMMIT_HASH_SHORT }}
-      DOCKER_IMAGE_TAG: ${{ needs.set_vars.outputs.DOCKER_IMAGE_TAG }}
+      PLATFORMS: linux/amd64,linux/arm64
 
     steps:
       - name: Checkout code
@@ -80,8 +81,4 @@ jobs:
         run: echo "${{ secrets.DOCKER_PAT }}" | docker login docker.io -u "$DOCKER_USERNAME" --password-stdin
 
       - name: Build and push Docker image
-
-        env:
-          PLATFORMS: linux/amd64,linux/arm64
-
         run: docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:$COMMIT_HASH_SHORT -t docker.io/$DOCKER_USERNAME/rest-api-test:$DOCKER_IMAGE_TAG --push .
