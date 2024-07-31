@@ -61,6 +61,8 @@ jobs:
   docker:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
     steps:
       - name: Checkout code
@@ -73,11 +75,11 @@ jobs:
         uses: docker/setup-buildx-action@v1
 
       - name: Login to Docker Hub
-        run: echo "${{ secrets.DOCKER_PAT }}" | docker login docker.io -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        run: echo "${{ secrets.DOCKER_PAT }}" | docker login docker.io -u "$DOCKER_USERNAME" --password-stdin
 
       - name: Build and push Docker image
 
         env:
           PLATFORMS: linux/amd64,linux/arm64
 
-        run: docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/${{ secrets.DOCKER_USERNAME }}/rest-api-test:${{ needs.setup.outputs.COMMIT_HASH_SHORT }} -t docker.io/${{ secrets.DOCKER_USERNAME }}/rest-api-test:${{ needs.setup.outputs.DOCKER_IMAGE_TAG }} --push .
+        run: docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:${{ needs.set_vars.outputs.COMMIT_HASH_SHORT }} -t docker.io/$DOCKER_USERNAME/rest-api-test:${{ needs.set_vars.outputs.DOCKER_IMAGE_TAG }} --push .
