@@ -1,0 +1,70 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches:
+      - feature/*
+      - current
+      - dev
+      - qa
+      - uat
+      - main
+
+jobs:
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+
+    outputs:
+      COMMIT_HASH_SHORT: ${{ steps.set_vars.outputs.git_commit_short }}
+      KUSTOMIZE_PATH: ${{ steps.set_vars.outputs.kustomize_path }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set Environment Variables
+        id: set_vars
+        run: |
+          if [[ $GITHUB_REF == refs/heads/feature/* ]]; then
+            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/sandbox"
+            TAG=sandbox
+          elif [[ $GITHUB_REF == refs/heads/current ]]; then
+            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/sandbox"
+            TAG=sandbox
+          elif [[ $GITHUB_REF == refs/heads/develop ]]; then
+            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/dev"
+            TAG=dev
+          elif [[ $GITHUB_REF == refs/heads/qa ]]; then
+            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/qa"
+            TAG=qa
+          elif [[ $GITHUB_REF == refs/heads/uat ]]; then
+            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/uat"
+            TAG=uat
+          elif [[ $GITHUB_REF == refs/heads/main ]]; then
+            echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/prod"
+            TAG=prod
+          fi
+
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "::set-output name=COMMIT_HASH_SHORT::$SHORT_SHA"
+
+  docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PAT }}" | docker login docker.io -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build and push Docker image
+        env:
+          COMMIT_HASH: ${{ github.sha }}
+          PLATFORMS: linux/amd64,linux/arm64
+        run: docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/${{ secrets.DOCKER_USERNAME }}/rest-api-test:${COMMIT_HASH:0:7} -t docker.io/${{ secrets.DOCKER_USERNAME }}/rest-api-test:latest --push .
