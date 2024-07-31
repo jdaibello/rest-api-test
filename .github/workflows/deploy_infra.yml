@@ -27,36 +27,36 @@ jobs:
       - name: Set Environment Variables
         id: set_vars
         run: |
-          echo "::set-output name=COMMIT_HASH_SHORT::$(git rev-parse --short HEAD)"
+          echo "COMMIT_HASH_SHORT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
           case "${GITHUB_REF#refs/heads/}" in
             feature/*)
-              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/sandbox"
+              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/sandbox" >> $GITHUB_ENV
               TAG=sandbox
               ;;
             current)
-              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/sandbox"
+              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/sandbox" >> $GITHUB_ENV
               TAG=sandbox
               ;;
             develop)
-              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/dev"
+              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/dev" >> $GITHUB_ENV
               TAG=dev
               ;;
             qa)
-              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/qa"
+              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/qa" >> $GITHUB_ENV
               TAG=qa
               ;;
             uat)
-              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/uat"
+              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/uat" >> $GITHUB_ENV
               TAG=uat
               ;;
             main)
-              echo "::set-output name=KUSTOMIZE_PATH::terraform/k8s/overlays/prod"
+              echo "KUSTOMIZE_PATH=terraform/k8s/overlays/prod" >> $GITHUB_ENV
               TAG=latest
               ;;
           esac
 
-          echo "::set-output name=DOCKER_IMAGE_TAG::$TAG"
+          echo "DOCKER_IMAGE_TAG=$TAG" >> $GITHUB_ENV
 
   docker:
     name: Build and Push Docker Image
