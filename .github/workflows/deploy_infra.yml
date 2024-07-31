@@ -55,11 +55,7 @@ jobs:
           echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}" >> $GITHUB_ENV
           echo "DOCKER_IMAGE_TAG=${TAG}" >> $GITHUB_ENV
 
-      - name: Log Environment Variables
-        run: |
-          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}"
-          echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}"
-          echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
+          echo "$GITHUB_ENV" >> $GITHUB_PATH
 
   docker:
     name: Build and Push Docker Image
@@ -71,6 +67,10 @@ jobs:
       PLATFORMS: linux/amd64,linux/arm64
 
     steps:
+      - name: Log GITHUB_PATH
+        run: |
+          echo "GITHUB_PATH: $GITHUB_PATH"
+
       - name: Checkout code
         uses: actions/checkout@v2
 
