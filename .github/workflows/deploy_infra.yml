@@ -24,7 +24,7 @@ jobs:
 
         run: |
           COMMIT_HASH_SHORT=$(git rev-parse --short HEAD)
-          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}" >> $GITHUB_ENV
+          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}" >> .env
 
           case "${GITHUB_REF#refs/heads/}" in
             feature/*)
@@ -53,14 +53,22 @@ jobs:
               ;;
           esac
 
-          echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}" >> $GITHUB_ENV
-          echo "DOCKER_IMAGE_TAG=${TAG}" >> $GITHUB_ENV
+          echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}" >> .env
+          echo "DOCKER_IMAGE_TAG=${TAG}" >> .env
 
-      - name: Log Environment Variables from GITHUB_ENV
+      - name: Upload .env file
+        uses: actions/upload-artifact@v3
+        with:
+          name: env-file
+          path: .env
+
+      - name: Log envs
         run: |
-          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}"
-          echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}"
-          echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
+          source .env
+
+          echo "COMMIT_HASH_SHORT=$COMMIT_HASH_SHORT"
+          echo "KUSTOMIZE_PATH=$KUSTOMIZE_PATH"
+          echo "DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG"
 
   docker:
     name: Build and Push Docker Image
@@ -74,6 +82,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Download .env file
+        uses: actions/download-artifact@v3
+        with:
+          name: env-file
+          path: .
 
       - name: Run update_configs.sh
         run: |
