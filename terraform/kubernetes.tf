@@ -73,3 +73,13 @@ resource "kubernetes_manifest" "base_deployment" {
 resource "kubernetes_manifest" "base_service" {
   manifest = yamldecode(file("${path.cwd}/k8s/base/service.yaml"))
 }
+
+resource "kubernetes_manifest" "base_statefulset" {
+  manifest = yamldecode(file("${path.cwd}/k8s/base/statefulset.yaml"))
+
+  depends_on = [ kubernetes_manifest.base_configmap ]
+}
+
+resource "kubernetes_manifest" "base_configmap" {
+  manifest = yamldecode(file("${path.cwd}/k8s/base/configmap.yaml"))
+}
