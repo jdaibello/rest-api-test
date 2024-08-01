@@ -15,11 +15,6 @@ jobs:
     name: Setup Environment
     runs-on: ubuntu-latest
 
-    outputs:
-      COMMIT_HASH_SHORT: ${{ steps.set-vars.outputs.COMMIT_HASH_SHORT }}
-      KUSTOMIZE_PATH: ${{ steps.set-vars.outputs.KUSTOMIZE_PATH }}
-      DOCKER_IMAGE_TAG: ${{ steps.set-vars.outputs.DOCKER_IMAGE_TAG }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -30,7 +25,6 @@ jobs:
         run: |
           COMMIT_HASH_SHORT=$(git rev-parse --short HEAD)
           echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}" >> $GITHUB_ENV
-          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}" >> $GITHUB_OUTPUT
 
           case "${GITHUB_REF#refs/heads/}" in
             feature/*)
@@ -62,9 +56,6 @@ jobs:
           echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}" >> $GITHUB_ENV
           echo "DOCKER_IMAGE_TAG=${TAG}" >> $GITHUB_ENV
 
-          echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}" >> $GITHUB_OUTPUT
-          echo "DOCKER_IMAGE_TAG=${TAG}" >> $GITHUB_OUTPUT
-
       - name: Log Environment Variables from GITHUB_ENV
         run: |
           echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}"
@@ -84,11 +75,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Log Environment Variables from GITHUB_ENV
+      - name: Run update_configs.sh
         run: |
-          echo "COMMIT_HASH_SHORT=${{ needs.set-vars.outputs.COMMIT_HASH_SHORT }}"
-          echo "KUSTOMIZE_PATH=${{ needs.set-vars.outputs.KUSTOMIZE_PATH }}"
-          echo "DOCKER_IMAGE_TAG=${{ needs.set-vars.outputs.DOCKER_IMAGE_TAG }}"
+          chmod +x update_configs.sh
+          ./update_configs.sh
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
