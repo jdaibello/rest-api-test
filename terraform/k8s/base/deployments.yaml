@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rest-api-test
+  labels:
+    app: rest-api-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rest-api-test
+  template:
+    metadata:
+      labels:
+        app: rest-api-test
+    spec:
+      containers:
+        - name: rest-api-test
+          image: docker.io/jpdev99/rest-api-test:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
+              value: postgres
+            - name: DB_HOST
+              value: db
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: postgres
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+      imagePullSecrets:
+        - name: regcred
