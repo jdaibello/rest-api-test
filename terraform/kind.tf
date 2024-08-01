@@ -7,9 +7,9 @@ locals {
 }
 
 resource "kind_cluster" "backend_cluster" {
-  name            = "rest-api-test"
+  name            = "rest-api-test-local-cluster"
   node_image      = "kindest/node:v1.27.1"
-  kubeconfig_path = pathexpand("/tmp/kube/config")
+  kubeconfig_path = "${path.cwd}/k8s/.kube/config.yaml"
   wait_for_ready  = true
 
   kind_config {
