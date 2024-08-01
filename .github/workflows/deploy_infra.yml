@@ -89,11 +89,6 @@ jobs:
           name: env-file
           path: .
 
-      - name: Run update_configs.sh
-        run: |
-          chmod +x update_configs.sh
-          ./update_configs.sh
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -104,4 +99,15 @@ jobs:
         run: echo "${{ secrets.DOCKER_PAT }}" | docker login docker.io -u "$DOCKER_USERNAME" --password-stdin
 
       - name: Build and push Docker image
-        run: docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:$COMMIT_HASH_SHORT -t docker.io/$DOCKER_USERNAME/rest-api-test:$COMMIT_HASH_SHORT --push .
+
+        env:
+          COMMIT_HASH_SHORT: ${{ env.COMMIT_HASH_SHORT }}
+          DOCKER_IMAGE_TAG: ${{ env.DOCKER_IMAGE_TAG }}
+
+        run: |
+          source .env
+
+          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}"
+          echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
+
+          docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:${COMMIT_HASH_SHORT} -t docker.io/$DOCKER_USERNAME/rest-api-test:${DOCKER_IMAGE_TAG} --push .
