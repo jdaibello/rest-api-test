@@ -65,3 +65,7 @@ resource "kubernetes_secret" "regcred_secret_prod" {
 
   type = "kubernetes.io/dockerconfigjson"
 }
+
+resource "kubernetes_manifest" "base_deployment" {
+  manifest = yamldecode(file("${path.cwd}/k8s/base/deployment.yaml"))
+}

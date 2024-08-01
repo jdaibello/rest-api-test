@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rest-api-test
+  namespace: rest-api-test-sandbox-ns
   labels:
     app: rest-api-test
 spec:
@@ -16,7 +17,7 @@ spec:
     spec:
       containers:
         - name: rest-api-test
-          image: docker.io/jpdev99/rest-api-test:latest
+          image: docker.io/jpdev99/rest-api-test:sandbox
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
@@ -38,5 +39,10 @@ spec:
             requests:
               memory: "64Mi"
               cpu: "250m"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
       imagePullSecrets:
         - name: regcred
