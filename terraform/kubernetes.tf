@@ -22,18 +22,18 @@ resource "kubernetes_secret" "regcred_secret_non_prod" {
   for_each = { for ns in local.non_prod_cluster_namespaces : ns => ns }
 
   metadata {
-    name = "regcred"
+    name      = "regcred"
     namespace = "rest-api-test-${each.key}-ns"
   }
 
   data = {
-      ".dockerconfigjson" = jsonencode({
+    ".dockerconfigjson" = jsonencode({
       auths = {
         "https://index.docker.io/v1/" = {
           username = var.dockerhub_username,
           password = var.dockerhub_password,
-          email = var.dockerhub_email,
-          auth = base64encode("${var.dockerhub_username}:${var.dockerhub_password}")
+          email    = var.dockerhub_email,
+          auth     = base64encode("${var.dockerhub_username}:${var.dockerhub_password}")
         }
       }
     })
@@ -46,7 +46,7 @@ resource "kubernetes_secret" "regcred_secret_prod" {
   for_each = { for ns in local.prod_cluster_namespaces : ns => ns }
 
   metadata {
-    name = "regcred"
+    name      = "regcred"
     namespace = "rest-api-test-${each.key}-ns"
   }
 
@@ -56,8 +56,8 @@ resource "kubernetes_secret" "regcred_secret_prod" {
         "https://index.docker.io/v1/" = {
           username = var.dockerhub_username,
           password = var.dockerhub_password,
-          email = var.dockerhub_email,
-          auth = base64encode("${var.dockerhub_username}:${var.dockerhub_password}")
+          email    = var.dockerhub_email,
+          auth     = base64encode("${var.dockerhub_username}:${var.dockerhub_password}")
         }
       }
     })
@@ -72,12 +72,14 @@ resource "kubernetes_manifest" "base_deployment" {
 
 resource "kubernetes_manifest" "base_service" {
   manifest = yamldecode(file("${path.cwd}/k8s/base/service.yaml"))
+
+  depends_on = [kubernetes_manifest.base_deployment]
 }
 
 resource "kubernetes_manifest" "base_statefulset" {
   manifest = yamldecode(file("${path.cwd}/k8s/base/statefulset.yaml"))
 
-  depends_on = [ kubernetes_manifest.base_configmap ]
+  depends_on = [kubernetes_manifest.base_configmap, kubernetes_manifest.base_deployment]
 }
 
 resource "kubernetes_manifest" "base_configmap" {
