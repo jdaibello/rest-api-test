@@ -141,6 +141,14 @@ jobs:
 
           sed -i "s|docker.io/jpdev99/rest-api-test:sandbox|docker.io/jpdev99/rest-api-test:${COMMIT_HASH_SHORT}|g" terraform/k8s/base/deployment.yaml
 
+      - name: Replace namespace in all k8s manifests
+        run: |
+          source .env
+
+          for file in terraform/k8s/base/*.yaml; do
+            sed -i "s|namespace: rest-api-test-sandbox-ns|namespace: rest-api-test-${DOCKER_IMAGE_TAG}-ns|g" "$file"
+          done
+
       - name: Replace paths in Terraform cluster file
         run: |
           sed -i 's|\${path.cwd}/k8s|\${path.cwd}/../k8s|g' terraform/cluster/main.tf
