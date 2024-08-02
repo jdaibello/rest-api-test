@@ -7,7 +7,7 @@ resource "aws_s3_bucket" "tfstate_remote_storage" {
 }
 
 resource "aws_s3_bucket_versioning" "tfstate_storage_versioning" {
-  bucket = aws_s3_bucket.tfstate_remote_storage.id
+  bucket                = aws_s3_bucket.tfstate_remote_storage.id
   expected_bucket_owner = data.aws_caller_identity.current.account_id
 
   versioning_configuration {
