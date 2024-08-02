@@ -22,8 +22,6 @@ resource "kubernetes_namespace" "local_cluster_namespace" {
   metadata {
     name = "rest-api-test-${each.key}-ns"
   }
-
-  depends_on = [kind_cluster.backend_cluster]
 }
 
 resource "kubernetes_secret" "regcred_secret_non_prod" {

@@ -1,27 +1,21 @@
-locals {
-  cluster_node_role_names = [
-    "control-plane",
-    "worker",
-    "worker"
-  ]
-}
+################
+### SETTINGS ###
+################
 
-resource "kind_cluster" "backend_cluster" {
-  name            = "rest-api-test-local-cluster"
-  node_image      = "kindest/node:v1.27.1"
-  kubeconfig_path = "${path.cwd}/k8s/.kube/config.yaml"
-  wait_for_ready  = true
+terraform {
+  required_version = ">= 1.2.0"
 
-  kind_config {
-    kind        = "Cluster"
-    api_version = "kind.x-k8s.io/v1alpha4"
+  required_providers {
 
-    dynamic "node" {
-      for_each = local.cluster_node_role_names
-
-      content {
-        role = node.value
-      }
+    kind = {
+      source  = "tehcyx/kind"
+      version = "0.5.1"
     }
   }
 }
+
+############
+### DATA ###
+############
+
+data "aws_caller_identity" "current" {}

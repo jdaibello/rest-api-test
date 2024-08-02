@@ -13,6 +13,7 @@ terraform {
   }
 
   required_providers {
+
     aws = {
       source  = "hashicorp/aws"
       version = "5.60.0"
@@ -39,7 +40,7 @@ provider "aws" {
 }
 
 provider "kubernetes" {
-  config_path = kind_cluster.backend_cluster.kubeconfig_path
+  config_path = module.cluster.kubeconfig_path
 }
 
 ############
@@ -47,3 +48,20 @@ provider "kubernetes" {
 ############
 
 data "aws_caller_identity" "current" {}
+
+###############
+### MODULES ###
+###############
+
+module "cluster" {
+  source = "./cluster"
+}
+
+module "resources" {
+  source          = "./resources"
+  kubeconfig_path = module.cluster.kubeconfig_path
+  dockerhub_email = var.dockerhub_email
+  dockerhub_username = var.dockerhub_username
+  dockerhub_password = var.dockerhub_password
+}
+
