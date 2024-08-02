@@ -143,3 +143,6 @@ jobs:
 
       - name: Terraform Init
         run: terraform -chdir=$TERRAFORM_DIR init -input=false -reconfigure
+
+      - name: Terraform Validate
+        run: terraform -chdir=$TERRAFORM_DIR validate
