@@ -163,10 +163,6 @@ jobs:
       - name: Terraform Validate
         run: terraform -chdir=$TERRAFORM_DIR validate
 
-      - name: Revert update Terraform paths in other files
-        run: |
-          find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/terraform/k8s|\${path.cwd}/k8s|g' {} +
-
       - name: Terraform Plan
         run: |
           source .env
@@ -181,4 +177,6 @@ jobs:
 
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
+          sed -i 's|\${path.cwd}/../k8s|\${path.cwd}/terraform/k8s|g' terraform/cluster/main.tf
           terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
+          find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/terraform/k8s|\${path.cwd}/k8s|g' {} +
