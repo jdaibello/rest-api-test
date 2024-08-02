@@ -120,11 +120,6 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      SANDBOX_TFVARS: ${{ secrets.SANDBOX_TFVARS }}
-      DEV_TFVARS: ${{ secrets.DEV_TFVARS }}
-      QA_TFVARS: ${{ secrets.QA_TFVARS }}
-      UAT_TFVARS: ${{ secrets.UAT_TFVARS }}
-      PROD_TFVARS: ${{ secrets.PROD_TFVARS }}
       TERRAFORM_DIR: terraform
 
     steps:
@@ -168,50 +163,22 @@ jobs:
       - name: Terraform Validate
         run: terraform -chdir=$TERRAFORM_DIR validate
 
-      - name: Set tfvars secrets
-        id: set-tfvars
-
+      - name: Revert update Terraform paths in other files
         run: |
-          source .env
-
-          # Use the appropriate secret based on the DOCKER_IMAGE_TAG
-          case "${DOCKER_IMAGE_TAG}" in
-            sandbox)
-              ENV_TFVARS="${SANDBOX_TFVARS}"
-              ;;
-            dev)
-              ENV_TFVARS="${DEV_TFVARS}"
-              ;;
-            qa)
-              ENV_TFVARS="${QA_TFVARS}"
-              ;;
-            uat)
-              ENV_TFVARS="${UAT_TFVARS}"
-              ;;
-            latest)
-              ENV_TFVARS="${PROD_TFVARS}"
-              ;;
-          esac
-
-          echo "ENV_TFVARS=${ENV_TFVARS}"
-          echo ${ENV_TFVARS} >> .env.terraform
-
-      - name: Upload .env.terraform file
-        uses: actions/upload-artifact@v3
-        with:
-          name: env-file
-          path: .env.terraform
-
-      - name: Log Terraform envs
-        run: |
-          source .env.terraform
-
-          echo "ENV_TFVARS=$ENV_TFVARS"
+          find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/terraform/k8s|\${path.cwd}/k8s|g' {} +
 
       - name: Terraform Plan
         run: |
-          source .env.terraform
+          source .env
+          mkdir -p ${{ runner.workspace }}/terraform/tfvars
+          touch ${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
-          echo "ENV_TFVARS=${ENV_TFVARS}"
+          cat <<EOF > ${{ runner.workspace }}/terraform/tfvars/.env.terraform
+          dockerhub_email = "${{ secrets.DOCKER_EMAIL }}"
+          dockerhub_username = "${{ secrets.DOCKER_USERNAME }}"
+          dockerhub_password = "${{ secrets.DOCKER_PAT }}"
+          EOF
 
-          terraform -chdir=$TERRAFORM_DIR plan -var-file=${ENV_TFVARS} -out=tfplan
+          echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
+
+          terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan

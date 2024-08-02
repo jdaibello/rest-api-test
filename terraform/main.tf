@@ -64,4 +64,3 @@ module "resources" {
   dockerhub_username = var.dockerhub_username
   dockerhub_password = var.dockerhub_password
 }
-
