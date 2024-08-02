@@ -1,0 +1,36 @@
+# Access: kubectl port-forward svc/rest-api-test <PORT>:<SERVICE_PORT> -n rest-api-test-<ENV>-ns
+# Example: kubectl port-forward svc/rest-api-test 3000:3000 -n rest-api-test-sandbox-ns
+
+# Deployment service
+apiVersion: v1
+kind: Service
+metadata:
+  name: rest-api-test
+  namespace: rest-api-test-sandbox-ns
+  labels:
+    app: rest-api-test
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: rest-api-test
+---
+# StatefulSet service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: rest-api-test-sandbox-ns
+  labels:
+    app: rest-api-test
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  selector:
+    app: rest-api-test

@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rest-api-test
+  namespace: rest-api-test-sandbox-ns
+  labels:
+    app: rest-api-test
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rest-api-test
+  template:
+    metadata:
+      labels:
+        app: rest-api-test
+    spec:
+      initContainers:
+        - name: init-permissions
+          image: busybox
+          command: ['sh', '-c', 'chown -R 999:999 /var/lib/postgresql/data']
+          volumeMounts:
+            - name: postgres-volume
+              mountPath: /var/lib/postgresql/data
+      containers:
+        - name: postgres
+          image: postgres:11
+          imagePullPolicy: Always
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+          ports:
+            - containerPort: 5432
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 999
+            runAsGroup: 999
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+          volumeMounts:
+            - name: postgres-volume
+              mountPath: /var/lib/postgresql/data
+            - name: init-schema
+              mountPath: /docker-entrypoint-initdb.d/create-schema.sql
+              subPath: create-schema.sql
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: postgres-volume
+          persistentVolumeClaim:
+            claimName: postgres-volume
+        - name: init-schema
+          configMap:
+            name: init-schema-configmap
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-volume
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi

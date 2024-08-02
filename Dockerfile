@@ -16,7 +16,7 @@ RUN deluser --remove-home $USER \
 WORKDIR $HOME
 
 # Update packages
-RUN apk update
+RUN apk update && apk add --no-cache busybox-extras
 
 COPY --chown=$USER:$USER package.json package-lock.json $HOME/
 
