@@ -165,6 +165,15 @@ jobs:
 
           echo ".kube/config.yaml=$(cat ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml)"
 
+      - name: Get Kind context
+        run: |
+          source .env
+          kind get clusters
+          kind_context=$(kind get clusters | grep -o "rest-api-test-${DOCKER_IMAGE_TAG}-ns")
+
+          echo "kind_context=$kind_context"
+          echo "kind_context=$kind_context" >> .env
+
       - name: Terraform Init
         run: terraform -chdir=$TERRAFORM_DIR init -input=false -reconfigure
 
