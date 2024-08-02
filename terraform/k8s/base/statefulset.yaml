@@ -16,6 +16,13 @@ spec:
       labels:
         app: rest-api-test
     spec:
+      initContainers:
+        - name: init-permissions
+          image: busybox
+          command: ['sh', '-c', 'chown -R 999:999 /var/lib/postgresql/data']
+          volumeMounts:
+            - name: postgres-volume
+              mountPath: /var/lib/postgresql/data
       containers:
         - name: postgres
           image: postgres:11
@@ -44,6 +51,16 @@ spec:
             - name: init-schema
               mountPath: /docker-entrypoint-initdb.d/create-schema.sql
               subPath: create-schema.sql
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
       volumes:
         - name: postgres-volume
           persistentVolumeClaim:

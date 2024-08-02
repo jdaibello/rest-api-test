@@ -1,4 +1,5 @@
 locals {
+  # Namespaces for non-prod and prod clusters
   non_prod_cluster_namespaces = [
     "sandbox",
     "dev",
@@ -8,6 +9,11 @@ locals {
   prod_cluster_namespaces = [
     "prod"
   ]
+
+  # Read the service.yaml file content
+  service_yaml_content = file("${path.cwd}/k8s/base/service.yaml")
+  has_separators       = can(regex("---", local.service_yaml_content))
+  yaml_documents       = local.has_separators ? split("---", local.service_yaml_content) : [local.service_yaml_content]
 }
 
 resource "kubernetes_namespace" "local_cluster_namespace" {
@@ -16,6 +22,8 @@ resource "kubernetes_namespace" "local_cluster_namespace" {
   metadata {
     name = "rest-api-test-${each.key}-ns"
   }
+
+  depends_on = [kind_cluster.backend_cluster]
 }
 
 resource "kubernetes_secret" "regcred_secret_non_prod" {
@@ -38,6 +46,8 @@ resource "kubernetes_secret" "regcred_secret_non_prod" {
       }
     })
   }
+
+  depends_on = [kubernetes_namespace.local_cluster_namespace]
 
   type = "kubernetes.io/dockerconfigjson"
 }
@@ -63,15 +73,20 @@ resource "kubernetes_secret" "regcred_secret_prod" {
     })
   }
 
+  depends_on = [kubernetes_namespace.local_cluster_namespace]
+
   type = "kubernetes.io/dockerconfigjson"
 }
 
 resource "kubernetes_manifest" "base_deployment" {
   manifest = yamldecode(file("${path.cwd}/k8s/base/deployment.yaml"))
+
+  depends_on = [kubernetes_namespace.local_cluster_namespace, kubernetes_secret.regcred_secret_non_prod, kubernetes_secret.regcred_secret_prod]
 }
 
 resource "kubernetes_manifest" "base_service" {
-  manifest = yamldecode(file("${path.cwd}/k8s/base/service.yaml"))
+  count    = length(local.yaml_documents)
+  manifest = yamldecode(element(local.yaml_documents, count.index))
 
   depends_on = [kubernetes_manifest.base_deployment]
 }
@@ -84,4 +99,6 @@ resource "kubernetes_manifest" "base_statefulset" {
 
 resource "kubernetes_manifest" "base_configmap" {
   manifest = yamldecode(file("${path.cwd}/k8s/base/configmap.yaml"))
+
+  depends_on = [kubernetes_manifest.base_service]
 }
