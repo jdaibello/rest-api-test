@@ -149,6 +149,14 @@ jobs:
             sed -i "s|namespace: rest-api-test-sandbox-ns|namespace: rest-api-test-${DOCKER_IMAGE_TAG}-ns|g" "$file"
           done
 
+      - name: Create tfvars file
+        run: |
+          source .env
+          touch terraform/tfvars/${DOCKER_IMAGE_TAG}.tfvars
+
+          TFVARS_SECRET_NAME="${DOCKER_IMAGE_TAG^^}_TFVARS"
+          echo "${!TFVARS_SECRET_NAME}" > terraform/tfvars/${DOCKER_IMAGE_TAG}.tfvars
+
       - name: Replace paths in Terraform cluster file
         run: |
           sed -i 's|\${path.cwd}/k8s|\${path.cwd}/../k8s|g' terraform/cluster/main.tf
