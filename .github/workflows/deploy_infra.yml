@@ -141,7 +141,11 @@ jobs:
 
           sed -i "s|docker.io/jpdev99/rest-api-test:sandbox|docker.io/jpdev99/rest-api-test:${COMMIT_HASH_SHORT}|g" terraform/k8s/base/deployment.yaml
 
-      - name: Update Terraform paths
+      - name: Replace paths in Terraform cluster file
+        run: |
+          sed -i 's|\${path.cwd}/k8s|\${path.cwd}/../k8s|g' terraform/cluster/main.tf
+
+      - name: Update Terraform paths in other files
         run: |
           find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/k8s|\${path.cwd}/terraform/k8s|g' {} +
 
