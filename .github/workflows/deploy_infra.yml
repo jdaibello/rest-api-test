@@ -115,6 +115,11 @@ jobs:
   terraform:
     name: Deploy Terraform Infrastructure
     runs-on: ubuntu-latest
+
+    container:
+      image: ubuntu:latest
+      options: --cpus=2 --memory=4g
+
     needs: docker
 
     env:
@@ -158,17 +163,18 @@ jobs:
         run: |
           find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/k8s|\${path.cwd}/terraform/k8s|g' {} +
 
-      - name: Set Kubeconfig
+      - name: Create Kind Cluster
         run: |
-          mkdir -p ${{ runner.workspace }}/terraform/k8s/.kube
-          echo "${KUBECONFIG}" > ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+          kind create cluster --name rest-api-test-local-cluster --image kindest/node:v1.27.1
 
-          echo ".kube/config.yaml=$(cat ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml)"
-
-      - name: Get Kind context
+      - name: Configure Kubeconfig
         run: |
-          source .env
-          kind export kubeconfig --name=rest-api-test-local-cluster
+          export KUBECONFIG="$(kind get kubeconfig-path --name="rest-api-test-local-cluster")"
+          echo "KUBECONFIG set to $KUBECONFIG"
+
+      - name: Verify Cluster
+        run: |
+          kubectl get nodes
 
       - name: Terraform Init
         run: terraform -chdir=$TERRAFORM_DIR init -input=false -reconfigure
@@ -190,6 +196,6 @@ jobs:
 
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
-          sed -i 's|\${path.cwd}/../k8s|\${path.cwd}/terraform/k8s|g' terraform/cluster/main.tf
-          TF_LOG=DEBUG terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
           find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/terraform/k8s|\${path.cwd}/k8s|g' {} +
+          TF_LOG=DEBUG terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
+
