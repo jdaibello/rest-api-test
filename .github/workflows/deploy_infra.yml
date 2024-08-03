@@ -13,7 +13,7 @@ on:
 jobs:
   setup:
     name: Setup Environment
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -72,7 +72,7 @@ jobs:
 
   docker:
     name: Build and Push Docker Image
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: setup
 
     env:
@@ -140,22 +140,10 @@ jobs:
       #  run: kind create cluster --name rest-api-test-local-cluster --image kindest/node:v1.21.1
 
       - name: Get kubeconfig
-        run: kind get kubeconfig --name rest-api-test-local-cluster > config.yaml
+        run: kind get kubeconfig --name rest-api-test-local-cluster > ${{ runner.workspace }}/terraform/k8s/.kube
 
       - name: Set permissions for kubeconfig
-        run: chmod 600 config.yaml
-
-      - name: Upload kubeconfig to artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: config.yaml
-          path: ${{ runner.workspace }}/terraform/k8s/.kube
-
-      - name: Download kubeconfig from artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: config.yaml
-          path: ${{ runner.workspace }}/terraform/k8s/.kube
+        run: chmod 600 ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
       - name: Display kubeconfig content
         run: cat ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
