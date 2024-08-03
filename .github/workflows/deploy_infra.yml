@@ -139,6 +139,15 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
 
+      - name: Check if kind cluster exists
+        id: check-cluster
+        run: |
+          if kind get clusters | grep -q "rest-api-test-local-cluster"; then
+            echo "CLUSTER_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "CLUSTER_EXISTS=false" >> $GITHUB_ENV
+          fi
+
       - name: Replace image tag in deployment YAML
         run: |
           source .env
@@ -191,9 +200,11 @@ jobs:
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
       - name: Terraform Plan - Cluster Module
+        # if: env.CLUSTER_EXISTS == 'false'
         run: terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
       - name: Terraform Apply - Cluster Module
+        # if: env.CLUSTER_EXISTS == 'false'
         run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
       - name: Get kubeconfig
@@ -223,6 +234,9 @@ jobs:
 
       - name: Get Kubernetes resources
         run: kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get all -n rest-api-test-${DOCKER_IMAGE_TAG}-ns
+
+        # Test rest-api-test service using port-forward on host machine
+        # kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml port-forward service/rest-api-test 3000:3000 -n rest-api-test-${DOCKER_IMAGE_TAG}-ns
 
       - name: Terraform Destroy Plan
         run: terraform -chdir=$TERRAFORM_DIR plan -destroy -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=destroy-plan.tfplan
