@@ -11,7 +11,7 @@ locals {
   ]
 
   # Read the service.yaml file content
-  service_yaml_content = file("${path.cwd}/k8s/base/service.yaml")
+  service_yaml_content = file("${path.module}/../k8s/base/service.yaml")
   has_separators       = can(regex("---", local.service_yaml_content))
   yaml_documents       = local.has_separators ? split("---", local.service_yaml_content) : [local.service_yaml_content]
 }
@@ -77,7 +77,7 @@ resource "kubernetes_secret" "regcred_secret_prod" {
 }
 
 resource "kubernetes_manifest" "base_deployment" {
-  manifest = yamldecode(file("${path.cwd}/k8s/base/deployment.yaml"))
+  manifest = yamldecode(file("${path.module}/../k8s/base/deployment.yaml"))
 
   depends_on = [kubernetes_namespace.local_cluster_namespace, kubernetes_secret.regcred_secret_non_prod, kubernetes_secret.regcred_secret_prod]
 }
@@ -90,13 +90,13 @@ resource "kubernetes_manifest" "base_service" {
 }
 
 resource "kubernetes_manifest" "base_statefulset" {
-  manifest = yamldecode(file("${path.cwd}/k8s/base/statefulset.yaml"))
+  manifest = yamldecode(file("${path.module}/../k8s/base/statefulset.yaml"))
 
   depends_on = [kubernetes_manifest.base_configmap, kubernetes_manifest.base_deployment]
 }
 
 resource "kubernetes_manifest" "base_configmap" {
-  manifest = yamldecode(file("${path.cwd}/k8s/base/configmap.yaml"))
+  manifest = yamldecode(file("${path.module}/../k8s/base/configmap.yaml"))
 
   depends_on = [kubernetes_manifest.base_service]
 }

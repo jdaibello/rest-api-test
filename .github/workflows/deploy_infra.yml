@@ -163,7 +163,7 @@ jobs:
 
           for file in ${{ runner.workspace }}/rest-api-test/terraform/k8s/base/*.yaml; do
             sed -i '' "s|namespace: rest-api-test-sandbox-ns|namespace: rest-api-test-${DOCKER_IMAGE_TAG}-ns|g" "$file"
-            sed -i '' "s|\${path.cwd}/k8s|\${{ runner.workspace }}/rest-api-test/terraform/k8s|g" "$file"
+            # sed -i '' "s|\${path.cwd}/k8s|\${{ runner.workspace }}/rest-api-test/terraform/k8s|g" "$file"
           done
 
       # - name: Replace paths in Terraform cluster file
@@ -175,6 +175,10 @@ jobs:
           echo "Current working directory: $(pwd)"
           echo "Listing files in $(pwd):"
           ls -al $(pwd)
+          echo "Listing files in ${{ runner.workspace }}/rest-api-test/terraform:"
+          ls -al ${{ runner.workspace }}/rest-api-test/terraform
+          echo "Listing files in ${{ runner.workspace }}/rest-api-test/terraform/k8s:"
+          ls -al ${{ runner.workspace }}/rest-api-test/terraform/k8s
           echo "Listing files in ${{ runner.workspace }}/rest-api-test/terraform/k8s/base:"
           ls -al ${{ runner.workspace }}/rest-api-test/terraform/k8s/base
 
