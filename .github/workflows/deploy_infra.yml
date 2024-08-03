@@ -209,6 +209,6 @@ jobs:
 
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
-          find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/terraform/k8s|\${path.cwd}/k8s|g' {} +
+          # find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/terraform/k8s|\${path.cwd}/k8s|g' {} +
           TF_LOG=DEBUG terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
