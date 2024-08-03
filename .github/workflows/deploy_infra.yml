@@ -112,35 +112,10 @@ jobs:
 
           docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:${COMMIT_HASH_SHORT} -t docker.io/$DOCKER_USERNAME/rest-api-test:${DOCKER_IMAGE_TAG} --push .
 
-  kind-cluster:
-    name: Create Kind Cluster
-    runs-on: ubuntu-latest
-    needs: docker
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Setup Kind
-        uses: engineerd/setup-kind@v0.5.0
-        with:
-          version: v0.23.0
-          image: kindest/node:v1.27.1
-          name: rest-api-test-local-cluster
-
-      - name: Get kubeconfig
-        run: kind get kubeconfig --name rest-api-test-local-cluster > config.yaml
-
-      - name: Upload kubeconfig to artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: config.yaml
-          path: config.yaml
-
   terraform:
     name: Deploy Terraform Infrastructure
     runs-on: ubuntu-latest
-    needs: [setup, kind-cluster]
+    needs: [setup, docker]
 
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -157,6 +132,22 @@ jobs:
         with:
           name: env-file
           path: .
+
+      - name: Setup Kind
+        uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: v0.23.0
+          image: kindest/node:v1.27.1
+          name: rest-api-test-local-cluster
+
+      - name: Get kubeconfig
+        run: kind get kubeconfig --name rest-api-test-local-cluster > config.yaml
+
+      - name: Upload kubeconfig to artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: config.yaml
+          path: config.yaml
 
       - name: Download kubeconfig from artifacts
         uses: actions/download-artifact@v3
@@ -210,5 +201,5 @@ jobs:
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
           # find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/terraform/k8s|\${path.cwd}/k8s|g' {} +
-          TF_LOG=DEBUG terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
+          terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
