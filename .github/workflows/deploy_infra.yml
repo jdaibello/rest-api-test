@@ -208,3 +208,8 @@ jobs:
       - name: Terraform Apply - Cluster Module
         run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
+      - name: Terraform Plan - Resources Module
+        run: terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
+
+      - name: Terraform Apply - Resources Module
+        run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
