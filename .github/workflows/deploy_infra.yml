@@ -139,14 +139,14 @@ jobs:
       # - name: Create a local Kubernetes cluster
       #  run: kind create cluster --name rest-api-test-local-cluster --image kindest/node:v1.21.1
 
-      - name: Get kubeconfig
-        run: kind get kubeconfig --name rest-api-test-local-cluster > ${{ runner.workspace }}/terraform/k8s/.kube
+      # - name: Get kubeconfig
+      #   run: kind get kubeconfig --name rest-api-test-local-cluster > ${{ runner.workspace }}/terraform/k8s/.kube
 
-      - name: Set permissions for kubeconfig
-        run: chmod 600 ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+      # - name: Set permissions for kubeconfig
+      #   run: chmod 600 ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
-      - name: Display kubeconfig content
-        run: cat ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+      # - name: Display kubeconfig content
+      #   run: cat ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
