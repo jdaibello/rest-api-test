@@ -188,7 +188,7 @@ jobs:
       - name: Terraform Validate
         run: terraform -chdir=$TERRAFORM_DIR validate
 
-      - name: Terraform Plan
+      - name: Prepare tfvars
         run: |
           source .env
           mkdir -p ${{ runner.workspace }}/terraform/tfvars
@@ -202,6 +202,8 @@ jobs:
 
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
+      - name: Terraform Plan - Module Cluster
+        run: |
           # find . -type f -name "*.tf" -exec sed -i 's|\${{ runner.workspace }}/terraform/k8s|\${{ runner.workspace }}/k8s|g' {} +
           terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
