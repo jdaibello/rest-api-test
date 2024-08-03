@@ -163,12 +163,12 @@ jobs:
           echo "Current working directory: $(pwd)"
           echo "Listing files in $(pwd):"
           ls -al $(pwd)
-          echo "Listing files in ${{ runner.workspace }}/rest-api-test/terraform:"
-          ls -al ${{ runner.workspace }}/rest-api-test/terraform
-          echo "Listing files in ${{ runner.workspace }}/rest-api-test/terraform/k8s:"
-          ls -al ${{ runner.workspace }}/rest-api-test/terraform/k8s
-          echo "Listing files in ${{ runner.workspace }}/rest-api-test/terraform/k8s/base:"
-          ls -al ${{ runner.workspace }}/rest-api-test/terraform/k8s/base
+          echo "Listing files in ${{ runner.workspace }}/terraform:"
+          ls -al ${{ runner.workspace }}/terraform
+          echo "Listing files in ${{ runner.workspace }}/terraform/k8s:"
+          ls -al ${{ runner.workspace }}/terraform/k8s
+          echo "Listing files in ${{ runner.workspace }}/terraform/k8s/base:"
+          ls -al ${{ runner.workspace }}/terraform/k8s/base
 
       - name: Terraform Init
         run: terraform -chdir=$TERRAFORM_DIR init -input=false -reconfigure
@@ -179,38 +179,38 @@ jobs:
       - name: Prepare tfvars
         run: |
           source .env
-          mkdir -p ${{ runner.workspace }}/rest-api-test/terraform/tfvars
-          touch ${{ runner.workspace }}/rest-api-test/terraform/tfvars/.env.terraform
+          mkdir -p ${{ runner.workspace }}/terraform/tfvars
+          touch ${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
-          cat <<EOF > ${{ runner.workspace }}/rest-api-test/terraform/tfvars/.env.terraform
+          cat <<EOF > ${{ runner.workspace }}/terraform/tfvars/.env.terraform
           dockerhub_email = "${{ secrets.DOCKER_EMAIL }}"
           dockerhub_username = "${{ secrets.DOCKER_USERNAME }}"
           dockerhub_password = "${{ secrets.DOCKER_PAT }}"
           EOF
 
-          echo ".env.terraform=$(cat ${{ runner.workspace }}/rest-api-test/terraform/tfvars/.env.terraform)"
+          echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
       - name: Terraform Plan - Cluster Module
-        run: terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/rest-api-test/terraform/tfvars/.env.terraform -out=tfplan
+        run: terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
       - name: Terraform Apply - Cluster Module
-        run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/rest-api-test/terraform/tfvars/.env.terraform
+        run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
       - name: Get kubeconfig
         run: |
-          mkdir -p ${{ runner.workspace }}/rest-api-test/terraform/k8s/.kube
-          touch ${{ runner.workspace }}/rest-api-test/terraform/k8s/.kube/config.yaml
+          mkdir -p ${{ runner.workspace }}/terraform/k8s/.kube
+          touch ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
-          kind get kubeconfig --name rest-api-test-local-cluster > ${{ runner.workspace }}/rest-api-test/terraform/k8s/.kube/config.yaml
+          kind get kubeconfig --name rest-api-test-local-cluster > ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
       - name: Set permissions for kubeconfig
-        run: chmod 600 ${{ runner.workspace }}/rest-api-test/terraform/k8s/.kube/config.yaml
+        run: chmod 600 ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
       - name: Display kubeconfig content
-        run: cat ${{ runner.workspace }}/rest-api-test/terraform/k8s/.kube/config.yaml
+        run: cat ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
       - name: Terraform Plan - Resources Module
-        run: terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/rest-api-test/terraform/tfvars/.env.terraform -out=tfplan
+        run: terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
       - name: Terraform Apply - Resources Module
-        run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.resources -var-file=${{ runner.workspace }}/rest-api-test/terraform/tfvars/.env.terraform
+        run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
