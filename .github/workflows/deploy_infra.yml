@@ -114,7 +114,7 @@ jobs:
 
   terraform:
     name: Deploy Terraform Infrastructure
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [setup, docker]
 
     env:
@@ -133,12 +133,11 @@ jobs:
           name: env-file
           path: .
 
-      - name: Setup Kind
-        uses: engineerd/setup-kind@v0.5.0
-        with:
-          version: v0.23.0
-          image: kindest/node:v1.27.1
-          name: rest-api-test-local-cluster
+      - name: Install Kind using Homebrew
+        run: brew install kind
+
+      # - name: Create a local Kubernetes cluster
+      #  run: kind create cluster --name rest-api-test-local-cluster --image kindest/node:v1.21.1
 
       - name: Get kubeconfig
         run: kind get kubeconfig --name rest-api-test-local-cluster > config.yaml
@@ -162,23 +161,23 @@ jobs:
         run: |
           source .env
 
-          sed -i "s|docker.io/jpdev99/rest-api-test:sandbox|docker.io/jpdev99/rest-api-test:${COMMIT_HASH_SHORT}|g" terraform/k8s/base/deployment.yaml
+          sed -i "s|docker.io/jpdev99/rest-api-test:sandbox|docker.io/jpdev99/rest-api-test:${COMMIT_HASH_SHORT}|g" ${{ runner.workspace }}/terraform/k8s/base/deployment.yaml
 
       - name: Replace namespace in all k8s manifests
         run: |
           source .env
 
-          for file in terraform/k8s/base/*.yaml; do
+          for file in ${{ runner.workspace }}/terraform/k8s/base/*.yaml; do
             sed -i "s|namespace: rest-api-test-sandbox-ns|namespace: rest-api-test-${DOCKER_IMAGE_TAG}-ns|g" "$file"
           done
 
       - name: Replace paths in Terraform cluster file
         run: |
-          sed -i 's|\${path.cwd}/k8s|\${path.cwd}/../k8s|g' terraform/cluster/main.tf
+          sed -i 's|\${{ runner.workspace }}/k8s|\${{ runner.workspace }}/../k8s|g' ${{ runner.workspace }}/terraform/cluster/main.tf
 
       - name: Update Terraform paths in other files
         run: |
-          find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/k8s|\${path.cwd}/terraform/k8s|g' {} +
+          find . -type f -name "*.tf" -exec sed -i 's|\${{ runner.workspace }}/k8s|\${{ runner.workspace }}/terraform/k8s|g' {} +
 
       - name: Terraform Init
         run: terraform -chdir=$TERRAFORM_DIR init -input=false -reconfigure
@@ -200,6 +199,6 @@ jobs:
 
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
-          # find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/terraform/k8s|\${path.cwd}/k8s|g' {} +
+          # find . -type f -name "*.tf" -exec sed -i 's|\${{ runner.workspace }}/terraform/k8s|\${{ runner.workspace }}/k8s|g' {} +
           terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
