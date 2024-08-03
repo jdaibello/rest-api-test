@@ -151,7 +151,7 @@ jobs:
 
           for file in ${{ runner.workspace }}/rest-api-test/terraform/k8s/base/*.yaml; do
             sed -i '' "s|namespace: rest-api-test-sandbox-ns|namespace: rest-api-test-${DOCKER_IMAGE_TAG}-ns|g" "$file"
-            # sed -i '' "s|\${path.cwd}/k8s|\${{ runner.workspace }}/rest-api-test/terraform/k8s|g" "$file"
+            # sed -i '' "s|\${path.cwd}/k8s|\${{ runner.workspace }}/terraform/k8s|g" "$file"
           done
 
       # - name: Replace paths in Terraform cluster file
@@ -208,6 +208,12 @@ jobs:
 
       - name: Display kubeconfig content
         run: cat ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
+      - name: Get cluster info
+        run: kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml cluster-info
+
+      - name: Set cluster context
+        run: kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml config use-context kind-rest-api-test-local-cluster
 
       - name: Terraform Plan - Resources Module
         run: terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
