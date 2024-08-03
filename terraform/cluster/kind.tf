@@ -21,6 +21,15 @@ resource "kind_cluster" "backend_cluster" {
 
       content {
         role = node.value
+
+        dynamic "extra_port_mappings" {
+          for_each = node.value == "control-plane" ? [1] : []
+
+          content {
+            container_port = 80
+            host_port      = 80
+          }
+        }
       }
     }
   }
