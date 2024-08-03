@@ -155,23 +155,28 @@ jobs:
         run: |
           source .env
 
-          sed -i "s|docker.io/jpdev99/rest-api-test:sandbox|docker.io/jpdev99/rest-api-test:${COMMIT_HASH_SHORT}|g" ${{ runner.workspace }}/terraform/k8s/base/deployment.yaml
+          sed -i '' "s|docker.io/jpdev99/rest-api-test:sandbox|docker.io/jpdev99/rest-api-test:${COMMIT_HASH_SHORT}|g" ${{ runner.workspace }}/rest-api-test/terraform/k8s/base/deployment.yaml
 
       - name: Replace namespace in all k8s manifests
         run: |
           source .env
 
-          for file in ${{ runner.workspace }}/terraform/k8s/base/*.yaml; do
-            sed -i "s|namespace: rest-api-test-sandbox-ns|namespace: rest-api-test-${DOCKER_IMAGE_TAG}-ns|g" "$file"
+          for file in ${{ runner.workspace }}/rest-api-test/terraform/k8s/base/*.yaml; do
+            sed -i '' "s|namespace: rest-api-test-sandbox-ns|namespace: rest-api-test-${DOCKER_IMAGE_TAG}-ns|g" "$file"
+            sed -i '' "s|\${path.cwd}/k8s|\${{ runner.workspace }}/rest-api-test/terraform/k8s|g" "$file"
           done
 
-      - name: Replace paths in Terraform cluster file
-        run: |
-          sed -i 's|\${{ runner.workspace }}/k8s|\${{ runner.workspace }}/../k8s|g' ${{ runner.workspace }}/terraform/cluster/main.tf
+      # - name: Replace paths in Terraform cluster file
+      #   run: |
+      #     sed -i 's|\${{ runner.workspace }}/k8s|\${{ runner.workspace }}/../k8s|g' ${{ runner.workspace }}/terraform/cluster/main.tf
 
-      - name: Update Terraform paths in other files
+      - name: Verify paths and list files
         run: |
-          find . -type f -name "*.tf" -exec sed -i 's|\${{ runner.workspace }}/k8s|\${{ runner.workspace }}/terraform/k8s|g' {} +
+          echo "Current working directory: $(pwd)"
+          echo "Listing files in $(pwd):"
+          ls -al $(pwd)
+          echo "Listing files in ${{ runner.workspace }}/rest-api-test/terraform/k8s/base:"
+          ls -al ${{ runner.workspace }}/rest-api-test/terraform/k8s/base
 
       - name: Terraform Init
         run: terraform -chdir=$TERRAFORM_DIR init -input=false -reconfigure
