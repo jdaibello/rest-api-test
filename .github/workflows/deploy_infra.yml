@@ -142,17 +142,23 @@ jobs:
       - name: Get kubeconfig
         run: kind get kubeconfig --name rest-api-test-local-cluster > config.yaml
 
+      - name: Set permissions for kubeconfig
+        run: chmod 600 config.yaml
+
       - name: Upload kubeconfig to artifacts
         uses: actions/upload-artifact@v3
         with:
           name: config.yaml
-          path: config.yaml
+          path: ${{ runner.workspace }}/terraform/k8s/.kube
 
       - name: Download kubeconfig from artifacts
         uses: actions/download-artifact@v3
         with:
           name: config.yaml
-          path: ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+          path: ${{ runner.workspace }}/terraform/k8s/.kube
+
+      - name: Display kubeconfig content
+        run: cat ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
