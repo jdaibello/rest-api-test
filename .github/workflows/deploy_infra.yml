@@ -112,15 +112,35 @@ jobs:
 
           docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:${COMMIT_HASH_SHORT} -t docker.io/$DOCKER_USERNAME/rest-api-test:${DOCKER_IMAGE_TAG} --push .
 
+  kind-cluster:
+    name: Create Kind Cluster
+    runs-on: ubuntu-latest
+    needs: docker
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Kind
+        uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: v0.11.1
+          image: kindest/node:v1.27.1
+          name: rest-api-test-local-cluster
+
+      - name: Get kubeconfig
+        run: kind get kubeconfig --name rest-api-test-local-cluster > config.yaml
+
+      - name: Upload kubeconfig to artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: config.yaml
+          path: config.yaml
+
   terraform:
     name: Deploy Terraform Infrastructure
     runs-on: ubuntu-latest
-
-    container:
-      image: ubuntu:latest
-      options: --cpus=2 --memory=4g
-
-    needs: docker
+    needs: kind-cluster
 
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -132,11 +152,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Download .env file
-        uses: actions/download-artifact@v3
+      - name: Download kubeconfig from artifacts
+        uses: actions/download-artifact@v2
         with:
-          name: env-file
-          path: .
+          name: config.yaml
+          path: ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
@@ -162,19 +182,6 @@ jobs:
       - name: Update Terraform paths in other files
         run: |
           find . -type f -name "*.tf" -exec sed -i 's|\${path.cwd}/k8s|\${path.cwd}/terraform/k8s|g' {} +
-
-      - name: Create Kind Cluster
-        run: |
-          kind create cluster --name rest-api-test-local-cluster --image kindest/node:v1.27.1
-
-      - name: Configure Kubeconfig
-        run: |
-          export KUBECONFIG="$(kind get kubeconfig-path --name="rest-api-test-local-cluster")"
-          echo "KUBECONFIG set to $KUBECONFIG"
-
-      - name: Verify Cluster
-        run: |
-          kubectl get nodes
 
       - name: Terraform Init
         run: terraform -chdir=$TERRAFORM_DIR init -input=false -reconfigure
