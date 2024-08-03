@@ -203,5 +203,5 @@ jobs:
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
           # find . -type f -name "*.tf" -exec sed -i 's|\${{ runner.workspace }}/terraform/k8s|\${{ runner.workspace }}/k8s|g' {} +
-          terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
+          terraform -chdir=$TERRAFORM_DIR plan -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
