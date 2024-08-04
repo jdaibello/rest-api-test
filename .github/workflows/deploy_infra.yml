@@ -243,6 +243,12 @@ jobs:
           { print $0 } # Print the new line
           ' "${{ runner.workspace }}/terraform/k8s/.kube/config.yaml" > temp && mv temp "${{ runner.workspace }}/terraform/k8s/.kube/config.yaml"
 
+      # Workaround for kind issue
+      - name: Restart Kind cluster
+        run: |
+          kind delete cluster --name rest-api-test-local-cluster
+          kind create cluster --name rest-api-test-local-cluster --config ${{ runner.workspace }}/terraform/k8s/kind-config.yaml
+
       - name: Set permissions for kubeconfig
         run: chmod 600 ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
