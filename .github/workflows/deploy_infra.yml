@@ -148,6 +148,14 @@ jobs:
             echo "CLUSTER_EXISTS=false" >> $GITHUB_ENV
           fi
 
+      - name: Get kubeconfig
+        if: env.CLUSTER_EXISTS == 'true'
+        run: |
+          mkdir -p ${{ runner.workspace }}/terraform/k8s/.kube
+          touch ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
+          kind get kubeconfig --name rest-api-test-local-cluster > ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
       - name: Replace image tag in deployment YAML
         run: |
           source .env
@@ -207,12 +215,17 @@ jobs:
         # if: env.CLUSTER_EXISTS == 'false'
         run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
-      - name: Get kubeconfig
+      - name: Get new kubeconfig
         run: |
           mkdir -p ${{ runner.workspace }}/terraform/k8s/.kube
           touch ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
           kind get kubeconfig --name rest-api-test-local-cluster > ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
+      # Fix bug
+      - name: Change server port from new kubeconfig
+        run: |
+          sed -i '' 's|server: https://127.0.0.1:56943|server: https://127.0.0.1:80|g' ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
       - name: Set permissions for kubeconfig
         run: chmod 600 ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
