@@ -166,6 +166,8 @@ jobs:
         run: |
           source .env
 
+          sed -i '' "s|\${path.module}/../k8s/base/service.yaml|\${{ runner.workspace }}/terraform/k8s/base/service.yaml|g" \${{ runner.workspace }}/terraform/resources/kubernetes.tf
+
           for file in ${{ runner.workspace }}/rest-api-test/terraform/k8s/base/*.yaml; do
             sed -i '' "s|namespace: rest-api-test-sandbox-ns|namespace: rest-api-test-${DOCKER_IMAGE_TAG}-ns|g" "$file"
             # sed -i '' "s|\${path.cwd}/k8s|\${{ runner.workspace }}/terraform/k8s|g" "$file"

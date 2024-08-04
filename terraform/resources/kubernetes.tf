@@ -82,11 +82,25 @@ resource "kubernetes_manifest" "base_deployment" {
   depends_on = [kubernetes_namespace.local_cluster_namespace, kubernetes_secret.regcred_secret_non_prod, kubernetes_secret.regcred_secret_prod]
 }
 
+resource "null_resource" "apply_base_services" {
+  provisioner "local-exec" {
+    command = <<EOT
+      kubectl apply -f ${path.module}/../k8s/base/service.yaml -n rest-api-test-sandbox-ns
+    EOT
+  }
+
+  depends_on = [kubernetes_manifest.base_deployment]
+}
+
 resource "kubernetes_manifest" "base_service" {
   count    = length(local.yaml_documents)
   manifest = yamldecode(element(local.yaml_documents, count.index))
 
-  depends_on = [kubernetes_manifest.base_deployment]
+  depends_on = [null_resource.apply_base_services]
+
+  lifecycle {
+    replace_triggered_by = [ kubernetes_manifest.base_deployment ]
+  }
 }
 
 resource "kubernetes_manifest" "base_statefulset" {
