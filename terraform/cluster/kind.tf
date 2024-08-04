@@ -28,11 +28,17 @@ resource "kind_cluster" "backend_cluster" {
           content {
             container_port = 80
             host_port      = 80
+            protocol       = "TCP"
           }
         }
       }
     }
   }
+
+   lifecycle {
+      prevent_destroy = false
+      create_before_destroy = false
+    }
 }
 
 output "kubeconfig_path" {
