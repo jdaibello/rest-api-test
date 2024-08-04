@@ -100,3 +100,10 @@ resource "kubernetes_manifest" "base_configmap" {
 
   depends_on = [kubernetes_manifest.base_service]
 }
+
+resource "kubernetes_manifest" "restart_services" {
+  count    = length(local.yaml_documents)
+  manifest = yamldecode(element(local.yaml_documents, count.index))
+
+  depends_on = [kubernetes_manifest.base_service]
+}
