@@ -183,6 +183,12 @@ jobs:
           echo "Listing files in ${{ runner.workspace }}/terraform/k8s/base:"
           ls -al ${{ runner.workspace }}/terraform/k8s/base
 
+      - name: Adjust kubeconfig path in Terraform resources
+        run: |
+          sed -i '' "s|config_path = \".*\"|config_path = \"${{ runner.workspace }}/terraform/k8s/.kube/config.yaml\"|g" ${{ runner.workspace }}/terraform/main.tf
+          sed -i '' "s|config_path = \".*\"|config_path = \"${{ runner.workspace }}/terraform/k8s/.kube/config.yaml\"|g" ${{ runner.workspace }}/terraform/resources/main.tf
+          sed -i '' "s|kubeconfig_path = \".*\"|kubeconfig_path = \"${{ runner.workspace }}/terraform/k8s/.kube/config.yaml\"|g" ${{ runner.workspace }}/terraform/cluster/kind.tf
+
       - name: Terraform Init
         run: terraform -chdir=$TERRAFORM_DIR init -input=false -reconfigure
 
@@ -204,15 +210,12 @@ jobs:
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
       - name: Terraform Plan - Cluster Module
-        if: env.CLUSTER_EXISTS == 'false'
         run: terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
       - name: Terraform Apply - Cluster Module
-        if: env.CLUSTER_EXISTS == 'false'
         run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
       - name: Get new kubeconfig
-        if: env.CLUSTER_EXISTS == 'false'
         run: |
           mkdir -p ${{ runner.workspace }}/terraform/k8s/.kube
           touch ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
