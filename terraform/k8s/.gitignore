@@ -1,1 +1,2 @@
-.kube/config.yaml
+# Don't version this file in the repository when working in a remote cluster
+#.kube/config.yaml
