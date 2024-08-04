@@ -204,14 +204,15 @@ jobs:
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
       - name: Terraform Plan - Cluster Module
-        # if: env.CLUSTER_EXISTS == 'false'
+        if: env.CLUSTER_EXISTS == 'false'
         run: terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
       - name: Terraform Apply - Cluster Module
-        # if: env.CLUSTER_EXISTS == 'false'
+        if: env.CLUSTER_EXISTS == 'false'
         run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
       - name: Get new kubeconfig
+        if: env.CLUSTER_EXISTS == 'false'
         run: |
           mkdir -p ${{ runner.workspace }}/terraform/k8s/.kube
           touch ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
