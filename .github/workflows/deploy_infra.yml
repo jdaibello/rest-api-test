@@ -193,6 +193,9 @@ jobs:
           sed -i '' "s|config_path = \".*\"|config_path = \"${{ runner.workspace }}/terraform/k8s/.kube/config.yaml\"|g" ${{ runner.workspace }}/terraform/resources/main.tf
           sed -i '' "s|kubeconfig_path = \".*\"|kubeconfig_path = \"${{ runner.workspace }}/terraform/k8s/.kube/config.yaml\"|g" ${{ runner.workspace }}/terraform/cluster/kind.tf
 
+          echo "config_path=$(cat ${{ runner.workspace }}/terraform/main.tf | grep config_path)"
+          echo "kubeconfig_path=$(cat ${{ runner.workspace }}/terraform/cluster/kind.tf | grep kubeconfig_path)"
+
       - name: Terraform Init
         run: terraform -chdir=$TERRAFORM_DIR init -input=false -reconfigure
 
@@ -218,9 +221,11 @@ jobs:
       #   run: terraform -chdir=$TERRAFORM_DIR destroy -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
       - name: Terraform Plan - Cluster Module
+        if: env.CLUSTER_EXISTS == 'false'
         run: terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
       - name: Terraform Apply - Cluster Module
+        if: env.CLUSTER_EXISTS == 'false'
         run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
       - name: Get new kubeconfig
@@ -275,10 +280,16 @@ jobs:
       #     done
 
       - name: Terraform Plan - Resources Module
-        run: terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
+        # if: env.CLUSTER_EXISTS == 'false'
+        run: |
+          terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
       - name: Terraform Apply - Resources Module
-        run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
+        if: env.CLUSTER_EXISTS == 'false'
+        run: |
+          source .env
+
+          terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
 
       - name: Get Kubernetes resources
         run: |
@@ -291,9 +302,14 @@ jobs:
         # Example: kubectl --kubeconfig /Users/jpedro/_work/rest-api-test/terraform/k8s/.kube/config.yaml port-forward svc/rest-api-test 3000:3000 -n rest-api-test-sandbox-ns
 
       - name: Terraform Destroy Plan
-        run: terraform -chdir=$TERRAFORM_DIR plan -destroy -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=destroy-plan.tfplan
+        if: env.CLUSTER_EXISTS == 'false'
+        run: |
+          source .env
+
+          terraform -chdir=$TERRAFORM_DIR plan -destroy -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=destroy-plan.tfplan
 
       - name: Terraform Destroy
+        if: env.CLUSTER_EXISTS == 'false'
         run: |
           source .env
 
