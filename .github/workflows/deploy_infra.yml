@@ -166,7 +166,7 @@ jobs:
         run: |
           source .env
 
-          sed -i '' "s|\${path.module}/../k8s/base/service.yaml|\${{ runner.workspace }}/terraform/k8s/base/service.yaml|g" \${{ runner.workspace }}/terraform/resources/kubernetes.tf
+          # sed -i '' "s|\${path.module}/../k8s/base/service.yaml|\${{ runner.workspace }}/terraform/k8s/base/service.yaml|g" \${{ runner.workspace }}/terraform/resources/kubernetes.tf
 
           for file in ${{ runner.workspace }}/rest-api-test/terraform/k8s/base/*.yaml; do
             sed -i '' "s|namespace: rest-api-test-sandbox-ns|namespace: rest-api-test-${DOCKER_IMAGE_TAG}-ns|g" "$file"
@@ -236,6 +236,39 @@ jobs:
       - name: Set cluster context
         run: kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml config use-context kind-rest-api-test-local-cluster
 
+      - name: Delete Kubernetes services and postgres pod to be created by Terraform Apply
+        id: delete_services
+        run: |
+          source .env
+
+          kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete svc rest-api-test -n rest-api-test-sandbox-ns || true
+          kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete svc postgres -n rest-api-test-sandbox-ns || true
+          kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete pods -all -n rest-api-test-sandbox-ns || true
+
+          for i in {1..10}; do
+            if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get svc rest-api-test -n rest-api-test-sandbox-ns 2>/dev/null; then
+              sleep 5
+            else
+              break
+            fi
+          done
+
+          for i in {1..10}; do
+            if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get svc postgres -n rest-api-test-sandbox-ns 2>/dev/null; then
+              sleep 5
+            else
+              break
+            fi
+          done
+
+          for i in {1..10}; do
+            if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get pods -n rest-api-test-sandbox-ns 2>/dev/null; then
+              sleep 5
+            else
+              break
+            fi
+          done
+
       - name: Terraform Plan - Resources Module
         run: terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
@@ -250,7 +283,7 @@ jobs:
 
         # Test rest-api-test service using port-forward on host machine when every cluster resource is READY
         # kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml port-forward service/rest-api-test 3000:3000 -n rest-api-test-${DOCKER_IMAGE_TAG}-ns
-        # Exampple: kubectl --kubeconfig /Users/jpedro/_work/rest-api-test/terraform/k8s/.kube/config.yaml port-forward svc/rest-api-test 3000:3000 -n rest-api-test-sandbox-ns
+        # Example: kubectl --kubeconfig /Users/jpedro/_work/rest-api-test/terraform/k8s/.kube/config.yaml port-forward svc/rest-api-test 3000:3000 -n rest-api-test-sandbox-ns
 
       - name: Terraform Destroy Plan
         run: terraform -chdir=$TERRAFORM_DIR plan -destroy -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=destroy-plan.tfplan
