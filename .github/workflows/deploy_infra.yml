@@ -242,8 +242,9 @@ jobs:
 
           kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get all -n rest-api-test-${DOCKER_IMAGE_TAG}-ns
 
-        # Test rest-api-test service using port-forward on host machine
+        # Test rest-api-test service using port-forward on host machine when every cluster resource is READY
         # kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml port-forward service/rest-api-test 3000:3000 -n rest-api-test-${DOCKER_IMAGE_TAG}-ns
+        # Exampple: kubectl --kubeconfig /Users/jpedro/_work/rest-api-test/terraform/k8s/.kube/config.yaml port-forward svc/rest-api-test 3000:3000 -n rest-api-test-sandbox-ns
 
       - name: Terraform Destroy Plan
         run: terraform -chdir=$TERRAFORM_DIR plan -destroy -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=destroy-plan.tfplan
