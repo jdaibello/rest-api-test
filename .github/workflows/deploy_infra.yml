@@ -55,6 +55,7 @@ jobs:
 
           echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}" >> .env
           echo "DOCKER_IMAGE_TAG=${TAG}" >> .env
+          echo "TF_PLUGIN_TIMEOUT=60s" >> .env
 
       - name: Upload .env file
         uses: actions/upload-artifact@v3
@@ -69,6 +70,7 @@ jobs:
           echo "COMMIT_HASH_SHORT=$COMMIT_HASH_SHORT"
           echo "KUSTOMIZE_PATH=$KUSTOMIZE_PATH"
           echo "DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG"
+          echo "TF_PLUGIN_TIMEOUT=$TF_PLUGIN_TIMEOUT"
 
   docker:
     name: Build and Push Docker Image
@@ -211,6 +213,10 @@ jobs:
 
           echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
 
+      # - name: Destroy existing Kind cluster
+      #   if: env.CLUSTER_EXISTS == 'true'
+      #   run: terraform -chdir=$TERRAFORM_DIR destroy -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
+
       - name: Terraform Plan - Cluster Module
         run: terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
 
@@ -236,38 +242,37 @@ jobs:
       - name: Set cluster context
         run: kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml config use-context kind-rest-api-test-local-cluster
 
-      - name: Delete Kubernetes services and postgres pod to be created by Terraform Apply
-        id: delete_services
-        run: |
-          source .env
+      # - name: Delete Kubernetes services and postgres pod to be created by Terraform Apply
+      #   run: |
+      #     source .env
 
-          kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete svc rest-api-test -n rest-api-test-sandbox-ns || true
-          kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete svc postgres -n rest-api-test-sandbox-ns || true
-          kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete pods -all -n rest-api-test-sandbox-ns || true
+      #     kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete svc rest-api-test -n rest-api-test-sandbox-ns || true
+      #     kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete svc postgres -n rest-api-test-sandbox-ns || true
+      #     kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete pods -all -n rest-api-test-sandbox-ns || true
 
-          for i in {1..10}; do
-            if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get svc rest-api-test -n rest-api-test-sandbox-ns 2>/dev/null; then
-              sleep 5
-            else
-              break
-            fi
-          done
+      #     for i in {1..10}; do
+      #       if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get svc rest-api-test -n rest-api-test-sandbox-ns 2>/dev/null; then
+      #         sleep 5
+      #       else
+      #         break
+      #       fi
+      #     done
 
-          for i in {1..10}; do
-            if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get svc postgres -n rest-api-test-sandbox-ns 2>/dev/null; then
-              sleep 5
-            else
-              break
-            fi
-          done
+      #     for i in {1..10}; do
+      #       if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get svc postgres -n rest-api-test-sandbox-ns 2>/dev/null; then
+      #         sleep 5
+      #       else
+      #         break
+      #       fi
+      #     done
 
-          for i in {1..10}; do
-            if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get pods -n rest-api-test-sandbox-ns 2>/dev/null; then
-              sleep 5
-            else
-              break
-            fi
-          done
+      #     for i in {1..10}; do
+      #       if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get pods -n rest-api-test-sandbox-ns 2>/dev/null; then
+      #         sleep 5
+      #       else
+      #         break
+      #       fi
+      #     done
 
       - name: Terraform Plan - Resources Module
         run: terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
@@ -287,3 +292,9 @@ jobs:
 
       - name: Terraform Destroy Plan
         run: terraform -chdir=$TERRAFORM_DIR plan -destroy -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=destroy-plan.tfplan
+
+      - name: Terraform Destroy
+        run: |
+          source .env
+
+          terraform -chdir=$TERRAFORM_DIR destroy -auto-approve -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
