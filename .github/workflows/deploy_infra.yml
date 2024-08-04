@@ -133,8 +133,8 @@ jobs:
           name: env-file
           path: .
 
-      - name: Install Kind using Homebrew
-        run: brew install kind
+      - name: Install Kind and GAWK using Homebrew
+        run: brew install kind && brew install gawk
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
@@ -222,10 +222,26 @@ jobs:
 
           kind get kubeconfig --name rest-api-test-local-cluster > ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
 
-      #  Bug fix
-      # - name: Change server port from new kubeconfig
-      #   run: |
-      #     sed -i '' 's|server: https://127.0.0.1:56943|server: https://127.0.0.1:80|g' ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+      # Bug fix
+      - name: Change server port from new kubeconfig
+        run: |
+          # sed -i '' 's|server: https://127.0.0.1:56943|server: https://127.0.0.1:80|g' ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
+          gawk '
+          # Read the file line by line
+          /server: https:\/\/127.0.0.1:/ {
+              # If the line contains the server URL with port 80, print it as is
+              if ($0 ~ /server: https:\/\/127.0.0.1:80/) {
+                  print $0
+              } else {
+                  # Replace the port number with 80
+                  sub(/server: https:\/\/127.0.0.1:[0-9]+/, "server: https://127.0.0.1:80")
+                  print $0
+              }
+              next # Skip to the next line
+          }
+          { print $0 } # Print the new line
+          ' "${{ runner.workspace }}/terraform/k8s/.kube/config.yaml" > temp && mv temp "${{ runner.workspace }}/terraform/k8s/.kube/config.yaml"
 
       - name: Set permissions for kubeconfig
         run: chmod 600 ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
