@@ -2,7 +2,18 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 
-app.use(cors());
+var whitelist = ["http://localhost:8080", "http://frontend:8080"];
+
+export const corsOptions = {
+  origin: function (origin, callback) {
+    if (whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+};
+
 app.use(express.json());
 app.use("/", require("./route/postsRoute"));
 app.use(function (error, req, res, next) {
