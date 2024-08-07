@@ -121,7 +121,7 @@ jobs:
           echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
 
           # aws ecr get-login-password --region $AWS_REGION | docker login --username joao-daibello --password-stdin $REGISTRY
-          docker buildx build --platform linux/amd64 -f Dockerfile.deploy -t $REGISTRY/$REPOSITORY:$COMMIT_HASH_SHORT -t $REGISTRY/$REPOSITORY:$DOCKER_IMAGE_TAG --push .
+          docker buildx build --platform linux/amd64 -f Dockerfile -t $REGISTRY/$REPOSITORY:$COMMIT_HASH_SHORT -t $REGISTRY/$REPOSITORY:$DOCKER_IMAGE_TAG --push .
 
   docker:
     name: Build and Push Docker Image
