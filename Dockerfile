@@ -31,7 +31,7 @@ RUN chown -R $USER:$USER .config
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=10s --timeout=30s --start-period=5s --retries=5 CMD curl -f http://localhost:3000/ || exit 1
+HEALTHCHECK --interval=10s --timeout=30s --start-period=5s --retries=5 CMD curl -f http://localhost:3000/healthcheck || exit 1
 
 USER $USER
 

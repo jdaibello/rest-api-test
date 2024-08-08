@@ -2,20 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 
-var whitelist = ["http://localhost:8080", "http://frontend:8080"];
-
-export const corsOptions = {
-  origin: function (origin, callback) {
-    if (whitelist.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-};
-
+app.use(cors()); // Don't do this in production environment
 app.use(express.json());
 app.use("/", require("./route/postsRoute"));
+app.use("/", require("./route/healthcheckRoute"));
 app.use(function (error, req, res, next) {
   if (error.message === "Post already exists") {
     return res.status(409).send(e.message);
