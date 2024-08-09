@@ -9,7 +9,7 @@ locals {
 resource "kind_cluster" "backend_cluster" {
   name            = "rest-api-test-local-cluster"
   node_image      = "kindest/node:v1.27.1"
-  kubeconfig_path = "${path.cwd}/k8s/.kube/config.yaml"
+  kubeconfig_path = "${path.module}/../k8s/.kube/config.yaml"
   wait_for_ready  = true
 
   kind_config {
@@ -24,4 +24,8 @@ resource "kind_cluster" "backend_cluster" {
       }
     }
   }
+}
+
+output "kubeconfig_path" {
+  value = kind_cluster.backend_cluster.kubeconfig_path
 }
