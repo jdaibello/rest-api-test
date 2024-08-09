@@ -18,12 +18,14 @@ WORKDIR $HOME
 # Update packages
 RUN apk update && apk add --no-cache busybox-extras curl
 
-COPY --chown=$USER:$USER package.json package-lock.json $HOME/
+COPY --chown=$USER:$USER package.json package-lock.json .env.production $HOME/
 
 # Install dependencies
 RUN npm install
 
 COPY --chown=$USER:$USER . $HOME/
+
+RUN mv .env.production .env
 
 EXPOSE 80
 EXPOSE 3000
