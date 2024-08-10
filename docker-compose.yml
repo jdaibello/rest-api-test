@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.local
     container_name: rest-api-test
     ports:
-      - "5000:3000"
+      - "3000:3000"
     networks:
       - rest-api-test
     depends_on:

@@ -32,7 +32,6 @@ RUN chown -R $USER:$USER .config
 RUN mv .env.local .env
 
 EXPOSE 3000
-EXPOSE 5000
 
 HEALTHCHECK --interval=10s --timeout=30s --start-period=5s --retries=5 CMD curl -f http://localhost:3000/healthcheck || exit 1
 

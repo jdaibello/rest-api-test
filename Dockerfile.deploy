@@ -28,7 +28,6 @@ COPY --chown=$USER:$USER . $HOME/
 RUN mv .env.production .env
 
 EXPOSE 80
-EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=30s --start-period=5s --retries=5 CMD curl -f http://localhost:80/healthcheck || exit 1
 
