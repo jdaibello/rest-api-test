@@ -7,15 +7,13 @@ dotenv.config();
 const app = express();
 
 var whitelist = [
-  "http://localhost:3000",
-  "http://backend:3000",
   "http://localhost:8080",
   "http://frontend:8080",
   "http://www.test-joao-daibello-frontend-website.s3-website.us-east-2.amazonaws.com",
   "https://d5xvmmbj7nefw.cloudfront.net"
 ];
 
-const corsOptions = {
+export const corsOptions = {
   origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true);
@@ -25,7 +23,7 @@ const corsOptions = {
   },
 };
 
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use("/", require("./route/postsRoute"));

@@ -1,7 +1,8 @@
 const express = require("express");
+const cors = require("cors");
 const router = express.Router();
 
-router.get("/healthcheck", async function (req, res, next) {
+router.get("/healthcheck", cors(), async function (req, res, next) {
   const healthcheck = {
     message: "OK",
     timestamp: Date.now(),
