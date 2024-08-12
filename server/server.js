@@ -1,5 +1,5 @@
 const express = require("express");
-const cors = require("cors");
+// const cors = require("cors");
 const dotenv = require("dotenv");
 
 dotenv.config();
@@ -13,7 +13,7 @@ var whitelist = [
   "https://d5xvmmbj7nefw.cloudfront.net"
 ];
 
-export const corsOptions = {
+const corsOptions = {
   origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true);
@@ -42,3 +42,5 @@ app.use(function (error, req, res, next) {
 });
 
 app.listen(process.env.SERVER_PORT || 3000);
+
+module.exports = corsOptions;

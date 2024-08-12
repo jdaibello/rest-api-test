@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const router = express.Router();
 const postsService = require("../service/postsService");
-const { corsOptions } = require("../server");
+const corsOptions = require("../server");
 
 router.get("/posts", cors(corsOptions), async function (req, res, next) {
   try {
