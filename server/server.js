@@ -13,7 +13,7 @@ var whitelist = [
   "https://d5xvmmbj7nefw.cloudfront.net"
 ];
 
-export const corsOptions = {
+const corsOptions = {
   origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true);
