@@ -7,6 +7,8 @@ dotenv.config();
 const app = express();
 
 var whitelist = [
+  "http://localhost:3000",
+  "http://backend:3000",
   "http://localhost:8080",
   "http://frontend:8080",
   "http://www.test-joao-daibello-frontend-website.s3-website.us-east-2.amazonaws.com",
