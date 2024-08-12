@@ -16,20 +16,20 @@ RUN deluser --remove-home $USER \
 WORKDIR $HOME
 
 # Update packages
-RUN apk update && apk add --no-cache busybox-extras
+RUN apk update && apk add --no-cache busybox-extras curl
 
-COPY --chown=$USER:$USER package.json package-lock.json $HOME/
+COPY --chown=$USER:$USER package.json package-lock.json .env.production $HOME/
 
 # Install dependencies
 RUN npm install
 
 COPY --chown=$USER:$USER . $HOME/
 
-# Used for VS Code devcontainer
-
-RUN chown -R $USER:$USER .config
+RUN mv .env.production .env
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=10s --timeout=30s --start-period=5s --retries=5 CMD curl -f http://localhost:3000/healthcheck || exit 1
 
 USER $USER
 

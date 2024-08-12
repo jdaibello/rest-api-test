@@ -55,6 +55,7 @@ jobs:
 
           echo "KUSTOMIZE_PATH=${KUSTOMIZE_PATH}" >> .env
           echo "DOCKER_IMAGE_TAG=${TAG}" >> .env
+          echo "TF_PLUGIN_TIMEOUT=60s" >> .env
 
       - name: Upload .env file
         uses: actions/upload-artifact@v3
@@ -69,6 +70,59 @@ jobs:
           echo "COMMIT_HASH_SHORT=$COMMIT_HASH_SHORT"
           echo "KUSTOMIZE_PATH=$KUSTOMIZE_PATH"
           echo "DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG"
+          echo "TF_PLUGIN_TIMEOUT=$TF_PLUGIN_TIMEOUT"
+
+  aws:
+    name: Deploy AWS ECR Image
+    runs-on: ubuntu-latest
+    needs: setup
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download .env file
+        uses: actions/download-artifact@v3
+        with:
+          name: env-file
+          path: .
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}
+
+        run: |
+          source .env
+
+          echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}"
+          echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
+
+          # aws ecr get-login-password --region $AWS_REGION | docker login --username joao-daibello --password-stdin $REGISTRY
+          docker buildx build --platform linux/amd64 -f Dockerfile.deploy -t $REGISTRY/$REPOSITORY:$COMMIT_HASH_SHORT -t $REGISTRY/$REPOSITORY:$DOCKER_IMAGE_TAG --push .
+
+      - name: Update SM Parameter Store's LASTEST_TAG parameter
+        run: |
+          source .env
+
+          aws ssm put-parameter --name /joao-daibello-test/backend/LATEST_TAG --value $COMMIT_HASH_SHORT --type String --overwrite
 
   docker:
     name: Build and Push Docker Image
@@ -110,4 +164,205 @@ jobs:
           echo "COMMIT_HASH_SHORT=${COMMIT_HASH_SHORT}"
           echo "DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}"
 
-          docker buildx build --platform $PLATFORMS -f Dockerfile -t docker.io/$DOCKER_USERNAME/rest-api-test:${COMMIT_HASH_SHORT} -t docker.io/$DOCKER_USERNAME/rest-api-test:${DOCKER_IMAGE_TAG} --push .
+          docker buildx build --platform $PLATFORMS -f Dockerfile.local -t docker.io/$DOCKER_USERNAME/rest-api-test:${COMMIT_HASH_SHORT} -t docker.io/$DOCKER_USERNAME/rest-api-test:${DOCKER_IMAGE_TAG} --push .
+
+  terraform:
+    name: Deploy Terraform Infrastructure
+    runs-on: self-hosted
+    needs: [setup, docker]
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      KUBECONFIG: ${{ secrets.KUBECONFIG_CONTENT }}
+      TERRAFORM_DIR: terraform
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download .env from artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: env-file
+          path: .
+
+      - name: Install Kind and GAWK using Homebrew
+        run: brew install kind && brew install gawk
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Check if kind cluster exists
+        id: check-cluster
+        run: |
+          if kind get clusters | grep -q "rest-api-test-local-cluster"; then
+            echo "CLUSTER_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "CLUSTER_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Get kubeconfig
+        if: env.CLUSTER_EXISTS == 'true'
+        run: |
+          mkdir -p ${{ runner.workspace }}/terraform/k8s/.kube
+          touch ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
+          kind get kubeconfig --name rest-api-test-local-cluster > ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
+      - name: Replace image tag in deployment YAML
+        run: |
+          source .env
+
+          sed -i '' "s|docker.io/jpdev99/rest-api-test:sandbox|docker.io/jpdev99/rest-api-test:${COMMIT_HASH_SHORT}|g" ${{ runner.workspace }}/rest-api-test/terraform/k8s/base/deployment.yaml
+
+      - name: Replace namespace in all k8s manifests
+        run: |
+          source .env
+
+          # sed -i '' "s|\${path.module}/../k8s/base/service.yaml|\${{ runner.workspace }}/terraform/k8s/base/service.yaml|g" \${{ runner.workspace }}/terraform/resources/kubernetes.tf
+
+          for file in ${{ runner.workspace }}/rest-api-test/terraform/k8s/base/*.yaml; do
+            sed -i '' "s|namespace: rest-api-test-sandbox-ns|namespace: rest-api-test-${DOCKER_IMAGE_TAG}-ns|g" "$file"
+            # sed -i '' "s|\${path.cwd}/k8s|\${{ runner.workspace }}/terraform/k8s|g" "$file"
+          done
+
+      - name: Verify paths and list files
+        run: |
+          echo "Current working directory: $(pwd)"
+          echo "Listing files in $(pwd):"
+          ls -al $(pwd)
+          echo "Listing files in ${{ runner.workspace }}/terraform:"
+          ls -al ${{ runner.workspace }}/terraform
+          echo "Listing files in ${{ runner.workspace }}/terraform/k8s:"
+          ls -al ${{ runner.workspace }}/terraform/k8s
+          echo "Listing files in ${{ runner.workspace }}/terraform/k8s/base:"
+          ls -al ${{ runner.workspace }}/terraform/k8s/base
+
+      - name: Adjust kubeconfig path in Terraform resources
+        run: |
+          sed -i '' "s|config_path = \".*\"|config_path = \"${{ runner.workspace }}/terraform/k8s/.kube/config.yaml\"|g" ${{ runner.workspace }}/terraform/main.tf
+          sed -i '' "s|config_path = \".*\"|config_path = \"${{ runner.workspace }}/terraform/k8s/.kube/config.yaml\"|g" ${{ runner.workspace }}/terraform/resources/main.tf
+          sed -i '' "s|kubeconfig_path = \".*\"|kubeconfig_path = \"${{ runner.workspace }}/terraform/k8s/.kube/config.yaml\"|g" ${{ runner.workspace }}/terraform/cluster/kind.tf
+
+          echo "config_path=$(cat ${{ runner.workspace }}/terraform/main.tf | grep config_path)"
+          echo "kubeconfig_path=$(cat ${{ runner.workspace }}/terraform/cluster/kind.tf | grep kubeconfig_path)"
+
+      - name: Terraform Init
+        run: terraform -chdir=$TERRAFORM_DIR init -input=false -reconfigure
+
+      - name: Terraform Validate
+        run: terraform -chdir=$TERRAFORM_DIR validate
+
+      - name: Prepare tfvars
+        run: |
+          source .env
+          mkdir -p ${{ runner.workspace }}/terraform/tfvars
+          touch ${{ runner.workspace }}/terraform/tfvars/.env.terraform
+
+          cat <<EOF > ${{ runner.workspace }}/terraform/tfvars/.env.terraform
+          dockerhub_email = "${{ secrets.DOCKER_EMAIL }}"
+          dockerhub_username = "${{ secrets.DOCKER_USERNAME }}"
+          dockerhub_password = "${{ secrets.DOCKER_PAT }}"
+          EOF
+
+          echo ".env.terraform=$(cat ${{ runner.workspace }}/terraform/tfvars/.env.terraform)"
+
+      # - name: Destroy existing Kind cluster
+      #   if: env.CLUSTER_EXISTS == 'true'
+      #   run: terraform -chdir=$TERRAFORM_DIR destroy -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
+
+      - name: Terraform Plan - Cluster Module
+        if: env.CLUSTER_EXISTS == 'false'
+        run: terraform -chdir=$TERRAFORM_DIR plan -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
+
+      - name: Terraform Apply - Cluster Module
+        if: env.CLUSTER_EXISTS == 'false'
+        run: terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.cluster -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
+
+      - name: Get new kubeconfig
+        run: |
+          mkdir -p ${{ runner.workspace }}/terraform/k8s/.kube
+          touch ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
+          kind get kubeconfig --name rest-api-test-local-cluster > ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
+      - name: Set permissions for kubeconfig
+        run: chmod 600 ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
+      - name: Display kubeconfig content
+        run: cat ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml
+
+      - name: Get cluster info
+        run: kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml cluster-info
+
+      - name: Set cluster context
+        run: kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml config use-context kind-rest-api-test-local-cluster
+
+      # - name: Delete Kubernetes services and postgres pod to be created by Terraform Apply
+      #   run: |
+      #     source .env
+
+      #     kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete svc rest-api-test -n rest-api-test-sandbox-ns || true
+      #     kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete svc postgres -n rest-api-test-sandbox-ns || true
+      #     kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml delete pods -all -n rest-api-test-sandbox-ns || true
+
+      #     for i in {1..10}; do
+      #       if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get svc rest-api-test -n rest-api-test-sandbox-ns 2>/dev/null; then
+      #         sleep 5
+      #       else
+      #         break
+      #       fi
+      #     done
+
+      #     for i in {1..10}; do
+      #       if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get svc postgres -n rest-api-test-sandbox-ns 2>/dev/null; then
+      #         sleep 5
+      #       else
+      #         break
+      #       fi
+      #     done
+
+      #     for i in {1..10}; do
+      #       if kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get pods -n rest-api-test-sandbox-ns 2>/dev/null; then
+      #         sleep 5
+      #       else
+      #         break
+      #       fi
+      #     done
+
+      - name: Terraform Plan - Resources Module
+        # if: env.CLUSTER_EXISTS == 'false'
+        run: |
+          terraform -chdir=$TERRAFORM_DIR plan -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=tfplan
+
+      - name: Terraform Apply - Resources Module
+        if: env.CLUSTER_EXISTS == 'false'
+        run: |
+          source .env
+
+          terraform -chdir=$TERRAFORM_DIR apply -auto-approve -target=module.resources -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform
+
+      - name: Get Kubernetes resources
+        run: |
+          source .env
+
+          kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml get all -n rest-api-test-${DOCKER_IMAGE_TAG}-ns
+
+        # Test rest-api-test service using port-forward on host machine when every cluster resource is READY
+        # kubectl --kubeconfig ${{ runner.workspace }}/terraform/k8s/.kube/config.yaml port-forward service/rest-api-test 3000:3000 -n rest-api-test-${DOCKER_IMAGE_TAG}-ns
+        # Example: kubectl --kubeconfig /Users/jpedro/_work/rest-api-test/terraform/k8s/.kube/config.yaml port-forward svc/rest-api-test 3000:3000 -n rest-api-test-sandbox-ns
+
+      - name: Terraform Destroy Plan
+        if: env.CLUSTER_EXISTS == 'false'
+        run: |
+          source .env
+
+          terraform -chdir=$TERRAFORM_DIR plan -destroy -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform -out=destroy-plan.tfplan
+
+      - name: Terraform Destroy
+        if: env.CLUSTER_EXISTS == 'false'
+        run: |
+          source .env
+
+          terraform -chdir=$TERRAFORM_DIR destroy -auto-approve -var-file=${{ runner.workspace }}/terraform/tfvars/.env.terraform

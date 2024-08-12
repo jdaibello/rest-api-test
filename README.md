@@ -40,10 +40,20 @@ PUT https://yoururl.com/posts/1
 DELETE https://yoururl.com/posts/1
 ```
 
-## How to start the API
+## How to start the API via Docker Compose
 
 1. Use Docker Compose
 
 ```bash
 docker-compose up -d --build
 ```
+
+## How to start the API via local Kubernetes cluster
+
+1. Use kubectl port-forward
+
+```bash
+kubectl --kubeconfig /Users/<username>/_work/rest-api-test/terraform/k8s/.kube/config.yaml port-forward svc/rest-api-test 3000:3000 -n rest-api-test-sandbox-ns
+```
+
+Obs: Because the Docker Compose is using the same ports of the local Kubernetes cluster services, you should use only one at a time
